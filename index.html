@@ -101,7 +101,7 @@ const FUTURES = [
 
 async function fetchQuote(ticker) {
   try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1y`;
+    const url = `/api/quote?ticker=${ticker}`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
