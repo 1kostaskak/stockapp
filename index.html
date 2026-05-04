@@ -143,15 +143,16 @@ async function fetchQuote(ticker){
     const r=await fetch(`/api/quote?ticker=${ticker}`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const json=await r.json();
-    const res=json.chart?.result?.[0];
-    if(!res) throw new Error('No data');
-    const meta=res.meta;
-    const closes=res.indicators?.quote?.[0]?.close?.filter(v=>v!=null)||[];
-    if(closes.length<2) throw new Error('No closes');
-    const price=meta.regularMarketPrice??closes.at(-1);
-    // Daily change: last close vs previous close (both from closes array)
-    const prevClose=closes.at(-2);
-    const chg=prevClose?((price-prevClose)/prevClose*100):0;
+    
+    // Finnhub quote data
+    const q=json.quote;
+    const hist=json.hist;
+    if(!q||q.c===0) throw new Error('No data');
+    
+    const price=q.c;          // current price
+    const chg=q.dp;           // daily % change (real-time!)
+    const closes=(hist?.c||[]).filter(v=>v!=null);
+    
     // RSI-14
     let rsi=null;
     if(closes.length>=15){
@@ -163,6 +164,7 @@ async function fetchQuote(ticker){
     }
     const ma50=closes.length>=50?closes.slice(-50).reduce((a,b)=>a+b,0)/50:null;
     const ma200=closes.length>=200?closes.slice(-200).reduce((a,b)=>a+b,0)/200:null;
+    
     // Consecutive oversold days
     let odays=0;
     for(let i=closes.length-1;i>=Math.max(14,closes.length-10);i--){
