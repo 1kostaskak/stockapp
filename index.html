@@ -144,14 +144,14 @@ async function fetchQuote(ticker){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const json=await r.json();
     
-    // Finnhub quote data
+    // Finnhub = real-time price+%, Yahoo = historical for RSI/MA
     const q=json.quote;
-    const hist=json.hist;
-    if(!q||q.c===0) throw new Error('No data');
+    const yahooResult=json.hist?.chart?.result?.[0];
+    if(!q||!q.c) throw new Error('No data');
     
-    const price=q.c;          // current price
-    const chg=q.dp;           // daily % change (real-time!)
-    const closes=(hist?.c||[]).filter(v=>v!=null);
+    const price=q.c;          // real-time price from Finnhub
+    const chg=q.dp;           // real-time daily % from Finnhub
+    const closes=(yahooResult?.indicators?.quote?.[0]?.close||[]).filter(v=>v!=null);
     
     // RSI-14
     let rsi=null;
