@@ -149,8 +149,8 @@ async function fetchQuote(ticker){
     const closes=res.indicators?.quote?.[0]?.close?.filter(v=>v!=null)||[];
     if(closes.length<2) throw new Error('No closes');
     const price=meta.regularMarketPrice??closes.at(-1);
-    // Use previous close for daily change
-    const prev=meta.chartPreviousClose??closes.at(-2);
+    // Daily change: use regularMarketPreviousClose (yesterday's close)
+    const prev=meta.regularMarketPreviousClose??meta.chartPreviousClose??closes.at(-2);
     const chg=((price-prev)/prev)*100;
     // RSI-14
     let rsi=null;
@@ -232,7 +232,7 @@ function StockRow({ticker,name,target,data,onRemove}){
     ),
     h('div',{className:'stock-price'},
       h('div',{className:'price-val'},'$'+data.price?.toFixed(2)),
-      h('div',{className:`price-chg ${cc}`},pfx+data.chg?.toFixed(2)+'%'),
+      h('div',{className:`price-chg ${cc}`},pfx+data.chg?.toFixed(2)+'% ημερήσια'),
       target&&h('div',{className:'price-dist'},`🎯 target $${target}`),
       onRemove&&h('button',{className:'remove-btn',onClick:()=>onRemove(ticker),style:{marginTop:4}},'×')
     )
