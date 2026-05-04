@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   const { ticker } = req.query;
   if (!ticker) return res.status(400).json({ error: 'No ticker' });
   
-  const FINNHUB_KEY = 'YOUR_FINNHUB_KEY';
+  const FINNHUB_KEY = 'd7sak1pr01qorsvi18p0d7sak1pr01qorsvi18pg';
   const isFutures = ticker.includes('=F') || ticker.includes('=X');
   
   try {
