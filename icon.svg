@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0d1b2a"/>
+  <polyline points="60,340 160,220 240,280 340,140 420,180" stroke="#4ade80" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="420" cy="180" r="20" fill="#4ade80"/>
+  <text x="256" y="400" font-family="system-ui" font-size="52" font-weight="700" fill="#ffffff" text-anchor="middle">Βοηθός</text>
+  <text x="256" y="465" font-family="system-ui" font-size="52" font-weight="700" fill="#4ade80" text-anchor="middle">Stocks</text>
+</svg>
