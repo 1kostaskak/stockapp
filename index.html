@@ -5,371 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Markets">
+<meta name="apple-mobile-web-app-title" content="Βοηθός Stocks">
 <meta name="theme-color" content="#0d1b2a">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon.svg">
-<title>Market Dashboard</title>
+<title>Βοηθός Stocks</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #f5f5f0;
-    --surface: #ffffff;
-    --surface2: #f0efe9;
-    --border: #e8e7e0;
-    --text: #1a1a18;
-    --text2: #6b6b65;
-    --text3: #9b9b94;
-    --green: #16a34a;
-    --green-bg: #f0fdf4;
-    --red: #dc2626;
-    --red-bg: #fef2f2;
-    --yellow: #d97706;
-    --yellow-bg: #fffbeb;
-    --blue: #2563eb;
-    --blue-bg: #eff6ff;
-    --accent: #0d1b2a;
-    --radius: 12px;
-    --radius-sm: 8px;
+    --bg: #f5f5f0; --surface: #ffffff; --surface2: #f0efe9;
+    --border: #e8e7e0; --text: #1a1a18; --text2: #6b6b65; --text3: #9b9b94;
+    --green: #16a34a; --green-bg: #f0fdf4; --red: #dc2626; --red-bg: #fef2f2;
+    --blue: #2563eb; --blue-bg: #eff6ff; --accent: #0d1b2a;
+    --radius: 12px; --radius-sm: 8px;
   }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overscroll-behavior: none;
-  }
-
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   .app { max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
-
-  /* Header */
-  .header {
-    background: var(--accent);
-    color: white;
-    padding: 16px 20px 14px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+  .header { background: var(--accent); color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
   .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-logo {
-    width: 32px; height: 32px;
-    background: #4ade80;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 600; color: #0d1b2a;
-  }
-  .header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
-  .header-time { font-size: 12px; opacity: 0.6; font-family: 'DM Mono', monospace; }
-  .refresh-btn {
-    background: rgba(255,255,255,0.1);
-    border: none; border-radius: 8px;
-    color: white; padding: 6px 10px;
-    font-size: 13px; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: background 0.2s;
-  }
-  .refresh-btn:hover { background: rgba(255,255,255,0.2); }
-  .refresh-btn:disabled { opacity: 0.5; }
-
-  /* Tabs */
-  .tabs {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    padding: 0 16px;
-    gap: 4px;
-    position: sticky;
-    top: 62px;
-    z-index: 99;
-  }
-  .tab {
-    padding: 12px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
-
-  /* Content */
+  .header-logo { width: 32px; height: 32px; background: #4ade80; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #0d1b2a; }
+  .header h1 { font-size: 15px; font-weight: 600; }
+  .header-time { font-size: 11px; opacity: 0.6; font-family: 'DM Mono', monospace; }
+  .refresh-btn { background: rgba(255,255,255,0.15); border: none; border-radius: 8px; color: white; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .refresh-btn:disabled { opacity: 0.4; }
+  .tabs { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; padding: 0 12px; position: sticky; top: 62px; z-index: 99; }
+  .tab { padding: 12px 14px; font-size: 13px; font-weight: 500; color: var(--text2); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .content { padding: 16px; }
-
-  /* Section */
   .section { margin-bottom: 20px; }
-  .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text3);
-    margin-bottom: 10px;
-    padding-left: 2px;
-  }
-
-  /* Card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-
-  /* Stock Row */
-  .stock-row {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    gap: 10px;
-    transition: background 0.15s;
-  }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .stock-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
   .stock-row:last-child { border-bottom: none; }
-  .stock-row:active { background: var(--surface2); }
-
-  .stock-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    background: var(--surface2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600;
-    color: var(--text2);
-    flex-shrink: 0;
-    font-family: 'DM Mono', monospace;
-  }
-
+  .stock-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--text2); flex-shrink: 0; font-family: 'DM Mono', monospace; }
   .stock-info { flex: 1; min-width: 0; }
-  .stock-ticker {
-    font-size: 14px; font-weight: 600;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: -0.3px;
-  }
-  .stock-name {
-    font-size: 11px; color: var(--text3);
-    margin-top: 1px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-
-  .stock-mid { text-align: center; }
-  .rsi-badge {
-    font-size: 11px; font-weight: 500;
-    padding: 3px 7px; border-radius: 6px;
-    font-family: 'DM Mono', monospace;
-  }
+  .stock-ticker { font-size: 14px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .stock-name { font-size: 11px; color: var(--text3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stock-mid { text-align: center; min-width: 60px; }
+  .rsi-badge { font-size: 11px; font-weight: 500; padding: 3px 7px; border-radius: 6px; font-family: 'DM Mono', monospace; display: inline-block; }
   .rsi-over { background: var(--red-bg); color: var(--red); }
   .rsi-under { background: var(--green-bg); color: var(--green); }
   .rsi-neutral { background: var(--surface2); color: var(--text2); }
-  .signal-dot { font-size: 10px; margin-top: 3px; }
-
   .stock-price { text-align: right; flex-shrink: 0; }
-  .price-value {
-    font-size: 15px; font-weight: 600;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: -0.5px;
-  }
-  .price-change {
-    font-size: 11px; font-weight: 500;
-    margin-top: 2px;
-    font-family: 'DM Mono', monospace;
-  }
-  .up { color: var(--green); }
-  .down { color: var(--red); }
-  .flat { color: var(--text3); }
-
-  /* Futures Card */
-  .futures-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .futures-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-  }
-  .futures-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-weight: 500; }
-  .futures-ticker {
-    font-size: 13px; font-weight: 600;
-    font-family: 'DM Mono', monospace;
-    margin-bottom: 4px;
-  }
-  .futures-price {
-    font-size: 20px; font-weight: 600;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: -0.5px;
-  }
+  .price-value { font-size: 15px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .price-change { font-size: 11px; font-weight: 500; margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .up { color: var(--green); } .down { color: var(--red); } .flat { color: var(--text3); }
+  .futures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .futures-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .futures-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; font-weight: 500; }
+  .futures-price { font-size: 20px; font-weight: 600; font-family: 'DM Mono', monospace; }
   .futures-chg { font-size: 12px; font-weight: 500; margin-top: 4px; }
-
-  /* Add stock */
-  .add-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    display: flex; gap: 8px;
-  }
-  .add-input {
-    flex: 1;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 8px 12px;
-    font-size: 14px;
-    font-family: 'DM Mono', monospace;
-    text-transform: uppercase;
-    background: var(--surface2);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.2s;
-  }
+  .add-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; gap: 8px; margin-bottom: 16px; }
+  .add-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; font-family: 'DM Mono', monospace; text-transform: uppercase; background: var(--surface2); color: var(--text); outline: none; }
   .add-input:focus { border-color: var(--accent); }
-  .add-btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: opacity 0.2s;
-  }
-  .add-btn:hover { opacity: 0.85; }
-  .add-btn:disabled { opacity: 0.4; }
-
-  /* Remove btn */
-  .remove-btn {
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: var(--surface2);
-    color: var(--text3);
-    font-size: 16px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s;
-  }
+  .add-btn { background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .remove-btn { width: 24px; height: 24px; border-radius: 50%; border: none; background: var(--surface2); color: var(--text3); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .remove-btn:hover { background: var(--red-bg); color: var(--red); }
-
-  /* Loading */
-  .loading {
-    padding: 32px;
-    text-align: center;
-    color: var(--text3);
-    font-size: 14px;
-  }
-  .spinner {
-    width: 24px; height: 24px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
-  }
+  .loading { padding: 40px; text-align: center; color: var(--text3); font-size: 14px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Entry signal */
-  .entry-signal {
-    background: var(--blue-bg);
-    color: var(--blue);
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-top: 2px;
-    display: inline-block;
-  }
-
-  /* Error */
-  .error-row {
-    padding: 10px 16px;
-    font-size: 12px;
-    color: var(--text3);
-    border-bottom: 1px solid var(--border);
-  }
-
-  /* Empty */
-  .empty {
-    padding: 32px 20px;
-    text-align: center;
-    color: var(--text3);
-    font-size: 14px;
-  }
-  .empty-icon { font-size: 32px; margin-bottom: 8px; }
-
-  /* Bottom nav */
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    max-width: 480px;
-    margin: 0 auto;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .nav-btn {
-    flex: 1;
-    padding: 10px 8px;
-    border: none;
-    background: none;
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text3);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    transition: color 0.2s;
-    font-family: 'DM Sans', sans-serif;
-  }
+  .empty { padding: 40px 20px; text-align: center; color: var(--text3); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; max-width: 480px; margin: 0 auto; padding: 4px 0 env(safe-area-inset-bottom); }
+  .nav-btn { flex: 1; padding: 8px; border: none; background: none; font-size: 10px; font-weight: 500; color: var(--text3); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: 'DM Sans', sans-serif; }
   .nav-btn.active { color: var(--accent); }
-  .nav-icon { font-size: 20px; }
-
-  /* Toast */
-  .toast {
-    position: fixed;
-    bottom: 90px;
-    left: 50%; transform: translateX(-50%);
-    background: var(--accent);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    z-index: 999;
-    animation: fadeup 0.3s ease;
-  }
-  @keyframes fadeup {
-    from { opacity: 0; transform: translate(-50%, 10px); }
-    to   { opacity: 1; transform: translate(-50%, 0); }
-  }
-
-  /* MA indicators */
-  .ma-indicators { display: flex; gap: 3px; margin-top: 2px; }
-  .ma-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-  }
-  .ma-dot.above { background: var(--green); }
-  .ma-dot.below { background: var(--red); }
+  .nav-icon { font-size: 22px; }
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--accent); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 999; white-space: nowrap; }
+  .entry-signal { background: var(--blue-bg); color: var(--blue); font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 2px; display: inline-block; }
+  .signal { font-size: 14px; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -377,90 +81,72 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script>
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback } = React;
 
 const BIG7 = [
-  { ticker: 'AAPL', name: 'Apple' },
-  { ticker: 'MSFT', name: 'Microsoft' },
-  { ticker: 'GOOGL', name: 'Alphabet' },
-  { ticker: 'AMZN', name: 'Amazon' },
-  { ticker: 'META', name: 'Meta' },
-  { ticker: 'NVDA', name: 'NVIDIA' },
-  { ticker: 'TSLA', name: 'Tesla' },
+  {ticker:'AAPL',name:'Apple'},{ticker:'MSFT',name:'Microsoft'},
+  {ticker:'GOOGL',name:'Alphabet'},{ticker:'AMZN',name:'Amazon'},
+  {ticker:'META',name:'Meta'},{ticker:'NVDA',name:'NVIDIA'},{ticker:'TSLA',name:'Tesla'},
 ];
 
 const FUTURES = [
-  { ticker: 'ES=F', name: 'S&P 500', label: 'S&P Fut' },
-  { ticker: 'NQ=F', name: 'Nasdaq 100', label: 'Nasdaq Fut' },
-  { ticker: 'YM=F', name: 'Dow Jones', label: 'Dow Fut' },
-  { ticker: 'GC=F', name: 'Gold', label: 'Χρυσός' },
-  { ticker: 'SI=F', name: 'Silver', label: 'Αργύριο' },
-  { ticker: 'CL=F', name: 'WTI Oil', label: 'WTI Πετρ.' },
-  { ticker: 'BZ=F', name: 'Brent Oil', label: 'Brent' },
+  {ticker:'ES=F',name:'S&P 500 Fut',label:'S&P Fut'},
+  {ticker:'NQ=F',name:'Nasdaq Fut',label:'Nasdaq Fut'},
+  {ticker:'YM=F',name:'Dow Fut',label:'Dow Fut'},
+  {ticker:'GC=F',name:'Gold',label:'Χρυσός'},
+  {ticker:'SI=F',name:'Silver',label:'Αργύριο'},
+  {ticker:'CL=F',name:'WTI Oil',label:'WTI'},
+  {ticker:'BZ=F',name:'Brent Oil',label:'Brent'},
 ];
-
-const PROXY = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 
 async function fetchQuote(ticker) {
   try {
-    const url = `${PROXY}${ticker}?interval=1d&range=1y&cors=true`;
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const json = await r.json();
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1y`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
     const result = json.chart?.result?.[0];
     if (!result) throw new Error('No data');
-
     const meta = result.meta;
-    const closes = result.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
-    if (closes.length < 2) throw new Error('Not enough data');
-
-    const price = meta.regularMarketPrice || closes[closes.length - 1];
-    const prev  = meta.chartPreviousClose || closes[closes.length - 2];
+    const closes = result.indicators?.quote?.[0]?.close?.filter(v => v != null) || [];
+    if (closes.length < 2) throw new Error('Insufficient data');
+    const price = meta.regularMarketPrice ?? closes.at(-1);
+    const prev  = meta.chartPreviousClose ?? closes.at(-2);
     const chg   = ((price - prev) / prev) * 100;
-
-    // RSI
     let rsi = null;
     if (closes.length >= 15) {
-      const deltas = closes.slice(-15).map((c, i, a) => i === 0 ? 0 : c - a[i-1]).slice(1);
-      const gains = deltas.map(d => d > 0 ? d : 0);
+      const slice = closes.slice(-15);
+      const deltas = slice.slice(1).map((c,i) => c - slice[i]);
+      const gains  = deltas.map(d => d > 0 ? d : 0);
       const losses = deltas.map(d => d < 0 ? -d : 0);
-      const avgG = gains.reduce((a,b) => a+b, 0) / 14;
-      const avgL = losses.reduce((a,b) => a+b, 0) / 14;
-      rsi = avgL === 0 ? 100 : Math.round(100 - (100 / (1 + avgG / avgL)));
+      const ag = gains.reduce((a,b)=>a+b,0)/14;
+      const al = losses.reduce((a,b)=>a+b,0)/14;
+      rsi = al === 0 ? 100 : Math.round(100 - 100/(1+ag/al));
     }
-
-    // MA
     const ma50  = closes.length >= 50  ? closes.slice(-50).reduce((a,b)=>a+b,0)/50  : null;
     const ma200 = closes.length >= 200 ? closes.slice(-200).reduce((a,b)=>a+b,0)/200 : null;
-
-    // Consecutive oversold days
     let oversoldDays = 0;
-    for (let i = closes.length - 1; i >= Math.max(0, closes.length - 10); i--) {
-      const slice = closes.slice(Math.max(0, i - 14), i + 1);
-      if (slice.length < 15) break;
-      const d = slice.map((c, idx, a) => idx === 0 ? 0 : c - a[idx-1]).slice(1);
-      const g = d.map(x => x > 0 ? x : 0);
-      const l = d.map(x => x < 0 ? -x : 0);
-      const ag = g.reduce((a,b)=>a+b,0)/14;
-      const al = l.reduce((a,b)=>a+b,0)/14;
-      const r = al === 0 ? 100 : 100 - (100/(1+ag/al));
+    for (let i = closes.length-1; i >= Math.max(14, closes.length-10); i--) {
+      const sl = closes.slice(i-14, i+1);
+      const dl = sl.slice(1).map((c,j) => c - sl[j]);
+      const ag2 = dl.map(d=>d>0?d:0).reduce((a,b)=>a+b,0)/14;
+      const al2 = dl.map(d=>d<0?-d:0).reduce((a,b)=>a+b,0)/14;
+      const r = al2===0?100:100-100/(1+ag2/al2);
       if (r < 45) oversoldDays++; else break;
     }
+    const entrySignal = oversoldDays >= 3 && chg > 0 && rsi && rsi < 45
+      ? `Είσοδος ~$${(price*0.995).toFixed(2)} (${oversoldDays} μέρες oversold)` : null;
+    return { price, chg, rsi, ma50above: ma50?price>ma50:null, ma200above: ma200?price>ma200:null, entrySignal, ok:true };
+  } catch(e) { return { ok:false, error:e.message }; }
+}
 
-    const entrySignal = oversoldDays >= 3 && chg > 0 && rsi < 45
-      ? `Είσοδος ~$${(price * 0.995).toFixed(2)} (${oversoldDays} μέρες oversold)`
-      : null;
-
-    return {
-      price, chg, rsi,
-      ma50above:  ma50  ? price > ma50  : null,
-      ma200above: ma200 ? price > ma200 : null,
-      entrySignal,
-      ok: true
-    };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
+function getSignal(d) {
+  if (!d?.ok) return '';
+  if (d.rsi > 70) return '🔴';
+  if (d.rsi < 35 && d.ma200above) return '🟢';
+  if (d.ma50above && d.ma200above) return '🟢';
+  if (d.ma50above === false && d.ma200above === false) return '🔴';
+  return '🟡';
 }
 
 function getRsiClass(rsi) {
@@ -470,83 +156,54 @@ function getRsiClass(rsi) {
   return 'rsi-neutral';
 }
 
-function getSignal(data) {
-  if (!data?.ok) return '';
-  const { rsi, ma50above, ma200above } = data;
-  if (rsi > 70) return '🔴';
-  if (rsi < 35 && ma200above) return '🟢';
-  if (ma50above && ma200above) return '🟢';
-  if (!ma50above && !ma200above) return '🔴';
-  return '🟡';
-}
-
-function StockRow({ ticker, name, data, onRemove, showRemove }) {
-  if (!data) return (
-    <div className="stock-row">
-      <div className="stock-icon">{ticker.slice(0,3)}</div>
-      <div className="stock-info">
-        <div className="stock-ticker">{ticker}</div>
-        <div className="stock-name">{name}</div>
-      </div>
-      <div className="spinner" style={{width:16,height:16,margin:0}}></div>
-    </div>
+function StockRow({ ticker, name, data, onRemove }) {
+  if (!data) return React.createElement('div', {className:'stock-row'},
+    React.createElement('div', {className:'stock-icon'}, ticker.slice(0,3)),
+    React.createElement('div', {className:'stock-info'},
+      React.createElement('div', {className:'stock-ticker'}, ticker),
+      React.createElement('div', {className:'stock-name'}, name)
+    ),
+    React.createElement('div', {className:'spinner', style:{width:16,height:16,margin:0}})
   );
-
-  if (!data.ok) return (
-    <div className="error-row">{ticker} — δεν φορτώθηκε</div>
+  if (!data.ok) return React.createElement('div', {className:'stock-row'},
+    React.createElement('div', {className:'stock-icon'}, '!'),
+    React.createElement('div', {className:'stock-info'},
+      React.createElement('div', {className:'stock-ticker'}, ticker),
+      React.createElement('div', {className:'stock-name', style:{color:'var(--red)'}}, 'Σφάλμα φόρτωσης')
+    )
   );
-
-  const chgClass = data.chg > 0 ? 'up' : data.chg < 0 ? 'down' : 'flat';
-  const chgPrefix = data.chg > 0 ? '+' : '';
-
-  return (
-    <div className="stock-row">
-      <div className="stock-icon">{ticker.slice(0,3)}</div>
-      <div className="stock-info">
-        <div className="stock-ticker">{ticker}</div>
-        <div className="stock-name">{name}</div>
-        {data.entrySignal && <div className="entry-signal">🎯 {data.entrySignal}</div>}
-      </div>
-      <div className="stock-mid">
-        {data.rsi && (
-          <div className={`rsi-badge ${getRsiClass(data.rsi)}`}>RSI {data.rsi}</div>
-        )}
-        <div className="ma-indicators">
-          {data.ma50above !== null && <div className={`ma-dot ${data.ma50above ? 'above' : 'below'}`} title="MA50"></div>}
-          {data.ma200above !== null && <div className={`ma-dot ${data.ma200above ? 'above' : 'below'}`} title="MA200"></div>}
-        </div>
-        <div className="signal-dot">{getSignal(data)}</div>
-      </div>
-      <div className="stock-price">
-        <div className="price-value">${data.price?.toFixed(2)}</div>
-        <div className={`price-change ${chgClass}`}>{chgPrefix}{data.chg?.toFixed(2)}%</div>
-      </div>
-      {showRemove && (
-        <button className="remove-btn" onClick={() => onRemove(ticker)}>×</button>
-      )}
-    </div>
+  const cc = data.chg > 0 ? 'up' : data.chg < 0 ? 'down' : 'flat';
+  const pfx = data.chg > 0 ? '+' : '';
+  return React.createElement('div', {className:'stock-row'},
+    React.createElement('div', {className:'stock-icon'}, ticker.slice(0,3)),
+    React.createElement('div', {className:'stock-info'},
+      React.createElement('div', {className:'stock-ticker'}, ticker),
+      React.createElement('div', {className:'stock-name'}, name),
+      data.entrySignal && React.createElement('div', {className:'entry-signal'}, '🎯 ' + data.entrySignal)
+    ),
+    React.createElement('div', {className:'stock-mid'},
+      data.rsi && React.createElement('div', {className:`rsi-badge ${getRsiClass(data.rsi)}`}, 'RSI ' + data.rsi),
+      React.createElement('div', {className:'signal'}, getSignal(data))
+    ),
+    React.createElement('div', {className:'stock-price'},
+      React.createElement('div', {className:'price-value'}, '$' + data.price?.toFixed(2)),
+      React.createElement('div', {className:`price-change ${cc}`}, pfx + data.chg?.toFixed(2) + '%')
+    ),
+    onRemove && React.createElement('button', {className:'remove-btn', onClick:()=>onRemove(ticker)}, '×')
   );
 }
 
-function FuturesCard({ item, data }) {
-  if (!data?.ok) return (
-    <div className="futures-card">
-      <div className="futures-label">{item.label}</div>
-      <div className="futures-ticker">{item.ticker}</div>
-      <div className="futures-price" style={{color:'var(--text3)'}}>—</div>
-    </div>
+function FutCard({ item, data }) {
+  if (!data?.ok) return React.createElement('div', {className:'futures-card'},
+    React.createElement('div', {className:'futures-label'}, item.label),
+    React.createElement('div', {className:'futures-price', style:{color:'var(--text3)'}}, '—')
   );
-
-  const chgClass = data.chg > 0 ? 'up' : data.chg < 0 ? 'down' : 'flat';
-  const prefix = data.chg > 0 ? '+' : '';
-
-  return (
-    <div className="futures-card">
-      <div className="futures-label">{item.label}</div>
-      <div className="futures-ticker">{item.ticker}</div>
-      <div className={`futures-price ${chgClass}`}>${data.price?.toFixed(2)}</div>
-      <div className={`futures-chg ${chgClass}`}>{prefix}{data.chg?.toFixed(2)}%</div>
-    </div>
+  const cc = data.chg > 0 ? 'up' : data.chg < 0 ? 'down' : 'flat';
+  const pfx = data.chg > 0 ? '+' : '';
+  return React.createElement('div', {className:'futures-card'},
+    React.createElement('div', {className:'futures-label'}, item.label),
+    React.createElement('div', {className:`futures-price ${cc}`}, '$' + data.price?.toFixed(2)),
+    React.createElement('div', {className:`futures-chg ${cc}`}, pfx + data.chg?.toFixed(2) + '%')
   );
 }
 
@@ -556,187 +213,119 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [watchlist, setWatchlist] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('watchlist') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('wl2') || '[]'); } catch { return []; }
   });
   const [addInput, setAddInput] = useState('');
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
-  };
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
 
-  const allTickers = [...BIG7.map(s => s.ticker), ...FUTURES.map(f => f.ticker), ...watchlist.map(w => w.ticker)];
-
-  const loadData = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
-    const tickers = [...new Set(allTickers)];
+    const tickers = [...new Set([...BIG7.map(s=>s.ticker), ...FUTURES.map(f=>f.ticker), ...watchlist.map(w=>w.ticker)])];
     const results = {};
-    await Promise.all(tickers.map(async t => {
-      results[t] = await fetchQuote(t);
-    }));
+    await Promise.all(tickers.map(async t => { results[t] = await fetchQuote(t); }));
     setData(results);
-    setLastUpdate(new Date().toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'}));
+    setLastUpdate(new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}));
     setLoading(false);
   }, [watchlist]);
 
-  useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    localStorage.setItem('watchlist', JSON.stringify(watchlist));
-  }, [watchlist]);
+  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { localStorage.setItem('wl2', JSON.stringify(watchlist)); }, [watchlist]);
 
   const handleAdd = async () => {
     const t = addInput.trim().toUpperCase();
     if (!t) return;
-    if (watchlist.find(w => w.ticker === t) || BIG7.find(b => b.ticker === t)) {
-      showToast('Υπάρχει ήδη στη λίστα');
-      return;
-    }
+    if (watchlist.find(w=>w.ticker===t) || BIG7.find(b=>b.ticker===t)) { showToast('Υπάρχει ήδη'); return; }
     setAdding(true);
     const d = await fetchQuote(t);
-    if (!d.ok) {
-      showToast('Δεν βρέθηκε: ' + t);
-    } else {
-      setWatchlist(prev => [...prev, { ticker: t, name: t }]);
-      setData(prev => ({ ...prev, [t]: d }));
-      setAddInput('');
-      showToast('Προστέθηκε: ' + t);
-    }
+    if (!d.ok) { showToast('Δεν βρέθηκε: ' + t); }
+    else { setWatchlist(p=>[...p,{ticker:t,name:t}]); setData(p=>({...p,[t]:d})); setAddInput(''); showToast('✓ ' + t); }
     setAdding(false);
   };
 
-  const handleRemove = (ticker) => {
-    setWatchlist(prev => prev.filter(w => w.ticker !== ticker));
-    showToast('Αφαιρέθηκε: ' + ticker);
-  };
+  const idxFut = FUTURES.slice(0,3);
+  const comFut = FUTURES.slice(3);
 
-  const indexFutures = FUTURES.slice(0, 3);
-  const commodities  = FUTURES.slice(3);
-
-  return React.createElement('div', { className: 'app' },
-    // Header
-    React.createElement('div', { className: 'header' },
-      React.createElement('div', { className: 'header-left' },
-        React.createElement('div', { className: 'header-logo' }, 'M'),
+  return React.createElement('div', {className:'app'},
+    React.createElement('div', {className:'header'},
+      React.createElement('div', {className:'header-left'},
+        React.createElement('div', {className:'header-logo'}, '📈'),
         React.createElement('div', null,
-          React.createElement('h1', null, 'Market Dashboard'),
-          lastUpdate && React.createElement('div', { className: 'header-time' }, 'Ενημ. ' + lastUpdate)
+          React.createElement('h1', null, 'Βοηθός Stocks'),
+          lastUpdate && React.createElement('div', {className:'header-time'}, 'Ενημ. ' + lastUpdate)
         )
       ),
-      React.createElement('button', {
-        className: 'refresh-btn',
-        onClick: loadData,
-        disabled: loading
-      }, loading ? '...' : '↻ Refresh')
+      React.createElement('button', {className:'refresh-btn', onClick:loadAll, disabled:loading}, loading?'...':'↻')
     ),
 
-    // Tabs
-    React.createElement('div', { className: 'tabs' },
-      React.createElement('button', { className: `tab ${tab==='markets'?'active':''}`, onClick: () => setTab('markets') }, '📊 Αγορές'),
-      React.createElement('button', { className: `tab ${tab==='futures'?'active':''}`, onClick: () => setTab('futures') }, '📈 Futures'),
-      React.createElement('button', { className: `tab ${tab==='watchlist'?'active':''}`, onClick: () => setTab('watchlist') }, '⭐ Watchlist')
+    React.createElement('div', {className:'tabs'},
+      React.createElement('button', {className:`tab ${tab==='markets'?'active':''}`, onClick:()=>setTab('markets')}, '📊 Αγορές'),
+      React.createElement('button', {className:`tab ${tab==='futures'?'active':''}`, onClick:()=>setTab('futures')}, '📈 Futures'),
+      React.createElement('button', {className:`tab ${tab==='watchlist'?'active':''}`, onClick:()=>setTab('watchlist')}, '⭐ Watchlist')
     ),
 
-    // Content
-    React.createElement('div', { className: 'content' },
+    React.createElement('div', {className:'content'},
+      tab==='markets' && React.createElement('div', {className:'section'},
+        React.createElement('div', {className:'section-title'}, 'Big 7'),
+        loading && !data['AAPL']
+          ? React.createElement('div', {className:'loading'}, React.createElement('div', {className:'spinner'}), 'Φόρτωση...')
+          : React.createElement('div', {className:'card'},
+              BIG7.map(s => React.createElement(StockRow, {key:s.ticker, ticker:s.ticker, name:s.name, data:data[s.ticker]}))
+            )
+      ),
 
-      // MARKETS TAB
-      tab === 'markets' && React.createElement('div', null,
-        React.createElement('div', { className: 'section' },
-          React.createElement('div', { className: 'section-title' }, 'Big 7'),
-          React.createElement('div', { className: 'card' },
-            BIG7.map(s => React.createElement(StockRow, {
-              key: s.ticker, ticker: s.ticker, name: s.name,
-              data: data[s.ticker], showRemove: false
-            }))
+      tab==='futures' && React.createElement('div', null,
+        React.createElement('div', {className:'section'},
+          React.createElement('div', {className:'section-title'}, 'Index Futures'),
+          React.createElement('div', {className:'futures-grid'},
+            idxFut.map(f => React.createElement(FutCard, {key:f.ticker, item:f, data:data[f.ticker]}))
+          )
+        ),
+        React.createElement('div', {className:'section'},
+          React.createElement('div', {className:'section-title'}, 'Commodities'),
+          React.createElement('div', {className:'futures-grid'},
+            comFut.map(f => React.createElement(FutCard, {key:f.ticker, item:f, data:data[f.ticker]}))
           )
         )
       ),
 
-      // FUTURES TAB
-      tab === 'futures' && React.createElement('div', null,
-        React.createElement('div', { className: 'section' },
-          React.createElement('div', { className: 'section-title' }, 'Index Futures'),
-          React.createElement('div', { className: 'futures-grid' },
-            indexFutures.map(f => React.createElement(FuturesCard, {
-              key: f.ticker, item: f, data: data[f.ticker]
-            }))
-          )
+      tab==='watchlist' && React.createElement('div', null,
+        React.createElement('div', {className:'add-section'},
+          React.createElement('input', {
+            className:'add-input', placeholder:'Ticker (π.χ. PLTR)',
+            value:addInput, onChange:e=>setAddInput(e.target.value.toUpperCase()),
+            onKeyDown:e=>e.key==='Enter'&&handleAdd(), maxLength:6
+          }),
+          React.createElement('button', {className:'add-btn', onClick:handleAdd, disabled:adding||!addInput.trim()}, adding?'...':'+ Προσθήκη')
         ),
-        React.createElement('div', { className: 'section' },
-          React.createElement('div', { className: 'section-title' }, 'Commodities'),
-          React.createElement('div', { className: 'futures-grid' },
-            commodities.map(f => React.createElement(FuturesCard, {
-              key: f.ticker, item: f, data: data[f.ticker]
-            }))
-          )
-        )
-      ),
-
-      // WATCHLIST TAB
-      tab === 'watchlist' && React.createElement('div', null,
-        React.createElement('div', { className: 'section' },
-          React.createElement('div', { className: 'add-section' },
-            React.createElement('input', {
-              className: 'add-input',
-              placeholder: 'Ticker (π.χ. PLTR)',
-              value: addInput,
-              onChange: e => setAddInput(e.target.value.toUpperCase()),
-              onKeyDown: e => e.key === 'Enter' && handleAdd(),
-              maxLength: 6
-            }),
-            React.createElement('button', {
-              className: 'add-btn',
-              onClick: handleAdd,
-              disabled: adding || !addInput.trim()
-            }, adding ? '...' : '+ Προσθήκη')
-          )
-        ),
-        watchlist.length === 0
-          ? React.createElement('div', { className: 'empty' },
-              React.createElement('div', { className: 'empty-icon' }, '📋'),
+        watchlist.length===0
+          ? React.createElement('div', {className:'empty'},
+              React.createElement('div', {className:'empty-icon'}, '📋'),
               'Πρόσθεσε μετοχές στη watchlist σου'
             )
-          : React.createElement('div', { className: 'section' },
-              React.createElement('div', { className: 'section-title' }, `${watchlist.length} Μετοχές`),
-              React.createElement('div', { className: 'card' },
-                watchlist.map(s => React.createElement(StockRow, {
-                  key: s.ticker, ticker: s.ticker, name: s.name,
-                  data: data[s.ticker], showRemove: true, onRemove: handleRemove
-                }))
-              )
+          : React.createElement('div', {className:'card'},
+              watchlist.map(s => React.createElement(StockRow, {key:s.ticker, ticker:s.ticker, name:s.name, data:data[s.ticker], onRemove:t=>{ setWatchlist(p=>p.filter(w=>w.ticker!==t)); showToast('Αφαιρέθηκε'); }}))
             )
       )
     ),
 
-    // Toast
-    toast && React.createElement('div', { className: 'toast' }, toast),
+    toast && React.createElement('div', {className:'toast'}, toast),
 
-    // Bottom Nav
-    React.createElement('div', { className: 'bottom-nav' },
-      React.createElement('button', { className: `nav-btn ${tab==='markets'?'active':''}`, onClick: () => setTab('markets') },
-        React.createElement('span', { className: 'nav-icon' }, '📊'),
-        'Αγορές'
-      ),
-      React.createElement('button', { className: `nav-btn ${tab==='futures'?'active':''}`, onClick: () => setTab('futures') },
-        React.createElement('span', { className: 'nav-icon' }, '📈'),
-        'Futures'
-      ),
-      React.createElement('button', { className: `nav-btn ${tab==='watchlist'?'active':''}`, onClick: () => setTab('watchlist') },
-        React.createElement('span', { className: 'nav-icon' }, '⭐'),
-        'Watchlist'
-      )
+    React.createElement('div', {className:'bottom-nav'},
+      ['markets','futures','watchlist'].map((t,i) => React.createElement('button', {
+        key:t, className:`nav-btn ${tab===t?'active':''}`, onClick:()=>setTab(t)
+      },
+        React.createElement('span', {className:'nav-icon'}, ['📊','📈','⭐'][i]),
+        ['Αγορές','Futures','Watchlist'][i]
+      ))
     )
   );
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
-}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
 </body>
 </html>
