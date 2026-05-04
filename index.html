@@ -147,7 +147,8 @@ async function fetchQuote(ticker){
     // Finnhub = real-time price+%, Yahoo = historical for RSI/MA
     const q=json.quote;
     const yahooResult=json.hist?.chart?.result?.[0];
-    if(!q||q.c==null||q.c===0) throw new Error('No data');
+    console.log('API response:', JSON.stringify(json).slice(0,200));
+    if(!q||q.c==null||q.c===0) throw new Error('No data - q='+JSON.stringify(q));
     
     const price=q.c;
     const chg=q.dp??0;
