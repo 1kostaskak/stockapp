@@ -133,7 +133,7 @@ const FUTURES=[
   {ticker:'NQ=F',label:'Nasdaq 100',section:'index'},
   {ticker:'YM=F',label:'Dow Jones',section:'index'},
   {ticker:'GC=F',label:'Χρυσός',section:'commodity'},
-  {ticker:'SI=F',label:'Αργύριο',section:'commodity'},
+  {ticker:'SI=F',label:'Silver (Αργ.)',section:'commodity'},
   {ticker:'CL=F',label:'WTI Πετρέλαιο',section:'commodity'},
   {ticker:'BZ=F',label:'Brent',section:'commodity'},
 ];
@@ -233,7 +233,7 @@ function StockRow({ticker,name,target,data,onRemove}){
     h('div',{className:'stock-price'},
       h('div',{className:'price-val'},'$'+data.price?.toFixed(2)),
       h('div',{className:`price-chg ${cc}`},pfx+data.chg?.toFixed(2)+'%'),
-      dist!==null&&h('div',{className:`price-dist ${distCls}`},(dist>0?'+':'')+dist.toFixed(1)+'% vs target'),
+      target&&h('div',{className:'price-dist'},`🎯 target $${target}`),
       onRemove&&h('button',{className:'remove-btn',onClick:()=>onRemove(ticker),style:{marginTop:4}},'×')
     )
   );
@@ -249,7 +249,7 @@ function FutCard({item,data}){
   return h('div',{className:'fut-card'},
     h('div',{className:'fut-label'},item.label),
     h('div',{className:`fut-price ${cc}`},'$'+data.price?.toFixed(2)),
-    h('div',{className:`fut-chg ${cc}`},pfx+data.chg?.toFixed(2)+'%')
+    h('div',{className:`fut-chg ${cc}`},pfx+data.chg?.toFixed(2)+'% (ετήσια)')
   );
 }
 
