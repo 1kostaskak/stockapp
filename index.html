@@ -149,9 +149,8 @@ async function fetchQuote(ticker){
     const closes=res.indicators?.quote?.[0]?.close?.filter(v=>v!=null)||[];
     if(closes.length<2) throw new Error('No closes');
     const price=meta.regularMarketPrice??closes.at(-1);
-    // Daily change: use regularMarketPreviousClose (yesterday's close)
-    const prev=meta.regularMarketPreviousClose??meta.chartPreviousClose??closes.at(-2);
-    const chg=((price-prev)/prev)*100;
+    // Use pre-calculated daily change % from v7 quote API
+    const chg=meta.regularMarketChangePercent??((price-(meta.regularMarketPreviousClose??meta.chartPreviousClose??closes.at(-2)))/(meta.regularMarketPreviousClose??meta.chartPreviousClose??closes.at(-2))*100);
     // RSI-14
     let rsi=null;
     if(closes.length>=15){
