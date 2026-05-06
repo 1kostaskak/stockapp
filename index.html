@@ -128,7 +128,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <div id="root"></div>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const {useState,useEffect,useCallback}=React;
 
@@ -273,12 +273,11 @@ function FutCard({item,data}){
 
 function ChartModal({ticker, name, onClose}){
   const [range, setRange] = React.useState('1y');
-  const [chartData, setChartData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
-  const priceRef = React.useRef(null);
-  const volRef = React.useRef(null);
-  const priceChart = React.useRef(null);
-  const volChart = React.useRef(null);
+  const priceCanvasRef = React.useRef(null);
+  const volCanvasRef = React.useRef(null);
+  const priceChartRef = React.useRef(null);
+  const volChartRef = React.useRef(null);
 
   const RANGES = ['1mo','3mo','6mo','1y','3y','5y'];
   const LABELS = {'1mo':'1Μ','3mo':'3Μ','6mo':'6Μ','1y':'1Χ','3y':'3Χ','5y':'5Χ'};
@@ -295,77 +294,72 @@ function ChartModal({ticker, name, onClose}){
         const closes = quotes.close||[];
         const volumes = quotes.volume||[];
 
-        const priceData = timestamps.map((t,i)=>({
-          time: t,
-          value: closes[i]??null
-        })).filter(d=>d.value!=null);
+        const labels = timestamps.map(t=>{
+          const d=new Date(t*1000);
+          return d.toLocaleDateString('el-GR',{month:'short',day:'numeric'});
+        });
 
-        const volData = timestamps.map((t,i)=>({
-          time: t,
-          value: volumes[i]??0,
-          color: i>0&&closes[i]>=closes[i-1]?'rgba(22,163,74,0.5)':'rgba(220,38,38,0.5)'
-        })).filter(d=>d.value!=null);
+        const priceData = closes.map((c,i)=>({x:labels[i],y:c?.toFixed(2)??null})).filter(d=>d.y!=null);
+        const volData   = volumes.map((v,i)=>({x:labels[i],y:v??0}));
+        const upColor   = closes.map((c,i)=>i===0||c>=closes[i-1]?'rgba(22,163,74,0.6)':'rgba(220,38,38,0.6)');
 
-        setChartData({priceData, volData});
+        // Destroy old charts
+        if(priceChartRef.current) priceChartRef.current.destroy();
+        if(volChartRef.current)   volChartRef.current.destroy();
+
+        if(priceCanvasRef.current){
+          priceChartRef.current = new Chart(priceCanvasRef.current, {
+            type:'line',
+            data:{
+              labels: labels,
+              datasets:[{
+                data: closes,
+                borderColor:'#0d1b2a',
+                borderWidth:2,
+                pointRadius:0,
+                fill:false,
+                tension:0.1,
+              }]
+            },
+            options:{
+              responsive:true, maintainAspectRatio:false,
+              plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+              scales:{
+                x:{display:false},
+                y:{grid:{color:'#f0efe9'},ticks:{color:'#9b9b94',font:{size:10}}}
+              }
+            }
+          });
+        }
+
+        if(volCanvasRef.current){
+          volChartRef.current = new Chart(volCanvasRef.current, {
+            type:'bar',
+            data:{
+              labels: labels,
+              datasets:[{data:volumes, backgroundColor:upColor, borderWidth:0}]
+            },
+            options:{
+              responsive:true, maintainAspectRatio:false,
+              plugins:{legend:{display:false},tooltip:{display:false}},
+              scales:{
+                x:{display:false},
+                y:{grid:{color:'#f0efe9'},ticks:{color:'#9b9b94',font:{size:9},maxTicksLimit:3}}
+              }
+            }
+          });
+        }
         setLoading(false);
       })
       .catch(()=>setLoading(false));
-  },[ticker, range]);
+  },[ticker,range]);
 
   React.useEffect(()=>{
-    if(!chartData||!priceRef.current||!volRef.current) return;
-
-    // Cleanup old charts
-    if(priceChart.current) priceChart.current.remove();
-    if(volChart.current) volChart.current.remove();
-
-    const isDark = false;
-    const bg = '#ffffff';
-    const textColor = '#6b6b65';
-    const gridColor = '#f0efe9';
-    const lineColor = '#0d1b2a';
-
-    // Price chart
-    priceChart.current = LightweightCharts.createChart(priceRef.current, {
-      width: priceRef.current.clientWidth,
-      height: 220,
-      layout: { background:{color:bg}, textColor },
-      grid: { vertLines:{color:gridColor}, horzLines:{color:gridColor} },
-      rightPriceScale: { borderColor: gridColor },
-      timeScale: { borderColor: gridColor, timeVisible: false },
-      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    });
-
-    const priceSeries = priceChart.current.addLineSeries({
-      color: lineColor,
-      lineWidth: 2,
-      priceLineVisible: false,
-    });
-    priceSeries.setData(chartData.priceData);
-    priceChart.current.timeScale().fitContent();
-
-    // Volume chart
-    volChart.current = LightweightCharts.createChart(volRef.current, {
-      width: volRef.current.clientWidth,
-      height: 80,
-      layout: { background:{color:bg}, textColor },
-      grid: { vertLines:{color:gridColor}, horzLines:{color:gridColor} },
-      rightPriceScale: { borderColor: gridColor, scaleMargins:{top:0.1,bottom:0} },
-      timeScale: { borderColor: gridColor, timeVisible: false },
-    });
-
-    const volSeries = volChart.current.addHistogramSeries({
-      priceFormat: { type:'volume' },
-      priceScaleId: '',
-    });
-    volSeries.setData(chartData.volData);
-    volChart.current.timeScale().fitContent();
-
     return ()=>{
-      if(priceChart.current) priceChart.current.remove();
-      if(volChart.current) volChart.current.remove();
+      if(priceChartRef.current) priceChartRef.current.destroy();
+      if(volChartRef.current)   volChartRef.current.destroy();
     };
-  },[chartData]);
+  },[]);
 
   return h('div',{className:'modal-overlay',onClick:onClose},
     h('div',{className:'modal-sheet',onClick:e=>e.stopPropagation()},
@@ -381,10 +375,10 @@ function ChartModal({ticker, name, onClose}){
         },LABELS[r]))
       ),
       loading
-        ?h('div',{className:'chart-loading'},h('div',{className:'spinner'}),' ')
+        ?h('div',{className:'chart-loading'},h('div',{className:'spinner'}))
         :h('div',null,
-            h('div',{className:'chart-container',ref:priceRef}),
-            h('div',{className:'vol-container',ref:volRef})
+            h('div',{className:'chart-container'},h('canvas',{ref:priceCanvasRef})),
+            h('div',{className:'vol-container'},h('canvas',{ref:volCanvasRef}))
           )
     )
   );
