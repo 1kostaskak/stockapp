@@ -399,6 +399,7 @@ function App(){
   const [addVal,setAddVal]=useState('');
   const [adding,setAdding]=useState(false);
   const [toast,setToast]=useState(null);
+  const [chartTicker,setChartTicker]=useState(null);
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500);};
 
