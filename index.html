@@ -107,6 +107,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nav-btn.active{color:var(--accent);}
 .nav-icon{font-size:22px;}
 
+/* Chart Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;}
+.modal-sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;margin:0 auto;padding:20px 16px 40px;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-title{font-size:16px;font-weight:600;}
+.modal-close{width:32px;height:32px;border-radius:50%;border:none;background:var(--surface2);color:var(--text2);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.range-btns{display:flex;gap:6px;margin-bottom:14px;}
+.range-btn{flex:1;padding:6px 4px;border:1px solid var(--border);border-radius:8px;background:none;font-size:12px;font-weight:500;cursor:pointer;font-family:"DM Sans",sans-serif;color:var(--text2);}
+.range-btn.active{background:var(--accent);color:white;border-color:var(--accent);}
+.chart-container{width:100%;height:220px;border-radius:10px;overflow:hidden;}
+.vol-container{width:100%;height:80px;border-radius:10px;overflow:hidden;margin-top:8px;}
+.chart-loading{height:220px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;}
+
 /* Toast */
 .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(--accent);color:white;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap;}
 </style>
@@ -115,6 +128,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <div id="root"></div>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 const {useState,useEffect,useCallback}=React;
 
@@ -218,7 +232,7 @@ function StockRow({ticker,name,target,data,onRemove}){
   const sig=getSignal(data);
   const dist=target?((target-data.price)/data.price*100):null;
   const distCls=dist>0?'up':'down';
-  return h('div',{className:'stock-row'},
+  return h('div',{className:'stock-row',onClick:()=>onChart&&onChart(ticker,name),style:{cursor:onChart?'pointer':'default'}},
     h('div',{className:'stock-icon'},ticker.slice(0,3)),
     h('div',{className:'stock-main'},
       h('div',{className:'stock-ticker'},ticker),
@@ -254,6 +268,125 @@ function FutCard({item,data}){
     h('div',{className:'fut-label'},item.label),
     h('div',{className:`fut-price ${cc}`},'$'+data.price?.toFixed(2)),
     h('div',{className:`fut-chg ${cc}`},pfx+data.chg?.toFixed(2)+'% (ετήσια)')
+  );
+}
+
+function ChartModal({ticker, name, onClose}){
+  const [range, setRange] = React.useState('1y');
+  const [chartData, setChartData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const priceRef = React.useRef(null);
+  const volRef = React.useRef(null);
+  const priceChart = React.useRef(null);
+  const volChart = React.useRef(null);
+
+  const RANGES = ['1mo','3mo','6mo','1y','3y','5y'];
+  const LABELS = {'1mo':'1Μ','3mo':'3Μ','6mo':'6Μ','1y':'1Χ','3y':'3Χ','5y':'5Χ'};
+
+  React.useEffect(()=>{
+    setLoading(true);
+    fetch(`/api/quote?ticker=${ticker}&range=${range}`)
+      .then(r=>r.json())
+      .then(json=>{
+        const result = json.hist?.chart?.result?.[0];
+        if(!result){setLoading(false);return;}
+        const timestamps = result.timestamp||[];
+        const quotes = result.indicators?.quote?.[0]||{};
+        const closes = quotes.close||[];
+        const volumes = quotes.volume||[];
+
+        const priceData = timestamps.map((t,i)=>({
+          time: t,
+          value: closes[i]??null
+        })).filter(d=>d.value!=null);
+
+        const volData = timestamps.map((t,i)=>({
+          time: t,
+          value: volumes[i]??0,
+          color: i>0&&closes[i]>=closes[i-1]?'rgba(22,163,74,0.5)':'rgba(220,38,38,0.5)'
+        })).filter(d=>d.value!=null);
+
+        setChartData({priceData, volData});
+        setLoading(false);
+      })
+      .catch(()=>setLoading(false));
+  },[ticker, range]);
+
+  React.useEffect(()=>{
+    if(!chartData||!priceRef.current||!volRef.current) return;
+
+    // Cleanup old charts
+    if(priceChart.current) priceChart.current.remove();
+    if(volChart.current) volChart.current.remove();
+
+    const isDark = false;
+    const bg = '#ffffff';
+    const textColor = '#6b6b65';
+    const gridColor = '#f0efe9';
+    const lineColor = '#0d1b2a';
+
+    // Price chart
+    priceChart.current = LightweightCharts.createChart(priceRef.current, {
+      width: priceRef.current.clientWidth,
+      height: 220,
+      layout: { background:{color:bg}, textColor },
+      grid: { vertLines:{color:gridColor}, horzLines:{color:gridColor} },
+      rightPriceScale: { borderColor: gridColor },
+      timeScale: { borderColor: gridColor, timeVisible: false },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    });
+
+    const priceSeries = priceChart.current.addLineSeries({
+      color: lineColor,
+      lineWidth: 2,
+      priceLineVisible: false,
+    });
+    priceSeries.setData(chartData.priceData);
+    priceChart.current.timeScale().fitContent();
+
+    // Volume chart
+    volChart.current = LightweightCharts.createChart(volRef.current, {
+      width: volRef.current.clientWidth,
+      height: 80,
+      layout: { background:{color:bg}, textColor },
+      grid: { vertLines:{color:gridColor}, horzLines:{color:gridColor} },
+      rightPriceScale: { borderColor: gridColor, scaleMargins:{top:0.1,bottom:0} },
+      timeScale: { borderColor: gridColor, timeVisible: false },
+    });
+
+    const volSeries = volChart.current.addHistogramSeries({
+      priceFormat: { type:'volume' },
+      priceScaleId: '',
+    });
+    volSeries.setData(chartData.volData);
+    volChart.current.timeScale().fitContent();
+
+    return ()=>{
+      if(priceChart.current) priceChart.current.remove();
+      if(volChart.current) volChart.current.remove();
+    };
+  },[chartData]);
+
+  return h('div',{className:'modal-overlay',onClick:onClose},
+    h('div',{className:'modal-sheet',onClick:e=>e.stopPropagation()},
+      h('div',{className:'modal-header'},
+        h('div',{className:'modal-title'},ticker+' · '+name),
+        h('button',{className:'modal-close',onClick:onClose},'×')
+      ),
+      h('div',{className:'range-btns'},
+        RANGES.map(r=>h('button',{
+          key:r,
+          className:`range-btn ${range===r?'active':''}`,
+          onClick:()=>setRange(r)
+        },LABELS[r]))
+      ),
+      loading
+        ?h('div',{className:'chart-loading'},h('div',{className:'spinner'}),' ')
+        :h('div',null,
+            h('div',{className:'chart-container',ref:priceRef}),
+            h('div',{className:'vol-container',ref:volRef})
+          )
+    )
   );
 }
 
@@ -320,7 +453,7 @@ function App(){
         loading&&!data['AAPL']
           ?h('div',{className:'loading'},h('div',{className:'spinner'}),'Φόρτωση...')
           :h('div',{className:'card'},
-            BIG7.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,target:s.target,data:data[s.ticker]}))
+            BIG7.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,target:s.target,data:data[s.ticker],onChart:(t,n)=>setChartTicker({ticker:t,name:n})}))
           )
       ),
 
@@ -345,13 +478,14 @@ function App(){
         watchlist.length===0
           ?h('div',{className:'empty'},h('div',{className:'empty-icon'},'📋'),'Πρόσθεσε μετοχές στη watchlist σου')
           :h('div',{className:'card'},
-            watchlist.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,data:data[s.ticker],
+            watchlist.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,data:data[s.ticker],onChart:(t,n)=>setChartTicker({ticker:t,name:n}),
               onRemove:t=>{setWatchlist(p=>p.filter(w=>w.ticker!==t));showToast('Αφαιρέθηκε');}}))
           )
       )
     ),
 
     toast&&h('div',{className:'toast'},toast),
+    chartTicker&&h(ChartModal,{ticker:chartTicker.ticker,name:chartTicker.name,onClose:()=>setChartTicker(null)}),
 
     h('div',{className:'bottom-nav'},
       [['markets','📊','Αγορές'],['futures','📈','Futures'],['watchlist','⭐','Watchlist']].map(([t,icon,label])=>
