@@ -192,8 +192,18 @@ const SCREENER=[
   {ticker:'HD',name:'Home Depot'},
   {ticker:'XOM',name:'Exxon Mobil'},
   {ticker:'NFLX',name:'Netflix'},
+  // iShares (Xetra, EUR) — σερβίρονται από Yahoo μέσω του proxy
+  {ticker:'CEBS.DE',name:'iShares Copper Miners',cur:'€'},
+  {ticker:'2B78.DE',name:'iShares Healthcare Innovation',cur:'€'},
+  {ticker:'IUHE.DE',name:'iShares S&P500 Health Care (EUR H)',cur:'€'},
+  {ticker:'CBUF.DE',name:'iShares MSCI World Health ESG',cur:'€'},
+  {ticker:'2B76.DE',name:'iShares Automation & Robotics',cur:'€'},
+  {ticker:'EXXW.DE',name:'iShares Asia Pacific Div 50',cur:'€'},
+  {ticker:'EXI2.DE',name:'iShares Global Titans 50',cur:'€'},
+  {ticker:'36B1.DE',name:'iShares JPM EM $ Bonds',cur:'€'},
+  {ticker:'2B7S.DE',name:'iShares US Treasury 1-3Y EUR-H',cur:'€'},
 ];
-const SCREENER_CACHE_KEY='screener_v1';
+const SCREENER_CACHE_KEY='screener_v2';
 const SCREENER_TTL=10*60*1000; // 10 λεπτά
 const SCREENER_CONCURRENCY=4;
 
@@ -285,7 +295,7 @@ function isShortWatch(d){ return d?.ok&&!d.entry&&d.ma200above===true&&d.rsi!=nu
 const pctAbove=(price,ma)=>ma?((price/ma-1)*100):null;
 
 // Chart Modal
-function ChartModal({ticker,name,price,chg,onClose}){
+function ChartModal({ticker,name,price,chg,cur='$',onClose}){
   const [range,setRange]=useState('1y');
   const [loading,setLoading]=useState(true);
   const priceRef=useRef(null);
@@ -309,7 +319,7 @@ function ChartModal({ticker,name,price,chg,onClose}){
           type:'line',
           data:{labels,datasets:[{data:d.closes,borderColor:'#0a0f1e',borderWidth:2,pointRadius:0,fill:false,tension:.1}]},
           options:{responsive:true,maintainAspectRatio:false,
-            plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>'$'+ctx.parsed.y.toFixed(2)}}},
+            plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>cur+ctx.parsed.y.toFixed(2)}}},
             scales:{x:{display:false},y:{grid:{color:'#f0efe8'},ticks:{color:'#a8a79e',font:{size:10,family:'JetBrains Mono'}}}}}
         });
       }
@@ -343,7 +353,7 @@ function ChartModal({ticker,name,price,chg,onClose}){
         ),
         h('div',{style:{display:'flex',alignItems:'center',gap:'12px'}},
           h('div',{className:'sheet-price'},
-            h('div',{className:'sheet-price-val'},'$'+(price?.toFixed(2)||'—')),
+            h('div',{className:'sheet-price-val'},cur+(price?.toFixed(2)||'—')),
             h('div',{className:`sheet-price-chg ${cc}`},pfx+(chg?.toFixed(2)||'0')+'%')
           ),
           h('button',{className:'close-btn',onClick:onClose},'×')
@@ -363,7 +373,7 @@ function ChartModal({ticker,name,price,chg,onClose}){
 }
 
 // Stock Row
-function StockRow({ticker,name,target,data,onRemove,onChart,note}){
+function StockRow({ticker,name,target,data,onRemove,onChart,note,cur='$'}){
   if(!data) return h('div',{className:'stock-row'},
     h('div',{className:'stock-icon'},ticker.slice(0,3)),
     h('div',{className:'stock-main'},
@@ -383,7 +393,7 @@ function StockRow({ticker,name,target,data,onRemove,onChart,note}){
   const cc=data.chg>0?'up':data.chg<0?'down':'flat';
   const pfx=data.chg>0?'+':'';
   const sig=getSignal(data);
-  return h('div',{className:'stock-row',onClick:()=>onChart&&onChart(ticker,name,data.price,data.chg)},
+  return h('div',{className:'stock-row',onClick:()=>onChart&&onChart(ticker,name,data.price,data.chg,cur)},
     h('div',{className:'stock-icon'},ticker.slice(0,3)),
     h('div',{className:'stock-main'},
       h('div',{className:'stock-ticker'},ticker),
@@ -399,9 +409,9 @@ function StockRow({ticker,name,target,data,onRemove,onChart,note}){
     ),
     h('div',{className:'stock-signal'},sig.icon),
     h('div',{className:'stock-price'},
-      h('div',{className:'price-val'},'$'+data.price?.toFixed(2)),
+      h('div',{className:'price-val'},cur+data.price?.toFixed(2)),
       h('div',{className:`price-chg ${cc}`},pfx+data.chg?.toFixed(2)+'%'),
-      target&&h('div',{className:'price-target'},'target $'+target),
+      target&&h('div',{className:'price-target'},'target '+cur+target),
       onRemove&&h('button',{className:'remove-btn',onClick:e=>{e.stopPropagation();onRemove(ticker);},style:{marginTop:4}},'×')
     )
   );
@@ -442,13 +452,13 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
 
   const row=(t,d,note)=>{
     const meta=byTicker(t)||{};
-    return h(StockRow,{key:t,ticker:t,name:meta.name,data:d,onChart,note});
+    return h(StockRow,{key:t,ticker:t,name:meta.name,data:d,onChart,note,cur:meta.cur||'$'});
   };
 
   return h('div',null,
     loading&&h('div',{className:'progress'},h('div',{style:{width:(progress.total?progress.done/progress.total*100:0)+'%'}})),
     h('div',{className:'hint'},
-      `Σάρωση ${SCREENER.length} ETFs/μετοχών. Σύσταση βάσει RSI(14), MA50, MA200 — όχι εγγύηση, προσωπική χρήση.`,
+      `Σάρωση ${SCREENER.length} ETFs/μετοχών (US σε $, Xetra σε €). Σύσταση βάσει RSI(14), MA50, MA200 — όχι εγγύηση, προσωπική χρήση.`,
       updatedAt&&h('span',null,` Ενημ. ${updatedAt}.`)
     ),
 
@@ -572,7 +582,7 @@ function App(){
     setAdding(false);
   };
 
-  const openChart=(ticker,name,price,chg)=>setChart({ticker,name,price,chg});
+  const openChart=(ticker,name,price,chg,cur='$')=>setChart({ticker,name,price,chg,cur});
 
   const idxFut=FUTURES.filter(f=>f.section==='index');
   const comFut=FUTURES.filter(f=>f.section==='commodity');
