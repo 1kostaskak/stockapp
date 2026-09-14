@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const FINNHUB_KEY = process.env.FINNHUB_KEY;
   if (!FINNHUB_KEY) return res.status(500).json({ error: 'Missing FINNHUB_KEY env var' });
 
-  const isFutures = ticker.includes('=F') || ticker.includes('=X');
+  const isFutures = ticker.includes('=F') || ticker.includes('=X') || /\.[A-Z0-9]{1,4}$/.test(ticker);
 
   // Map range to Yahoo Finance params
   const rangeMap = {
