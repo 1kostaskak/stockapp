@@ -40,15 +40,20 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tex
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Tabs */
-.tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 10px;position:sticky;top:62px;z-index:99;}
-.tab{padding:11px 16px;font-size:13px;font-weight:600;color:var(--text3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:'Space Grotesk',sans-serif;letter-spacing:-.2px;transition:all .2s;}
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 6px;position:sticky;top:62px;z-index:99;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:11px 12px;font-size:13px;font-weight:600;color:var(--text3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:'Space Grotesk',sans-serif;letter-spacing:-.2px;transition:all .2s;}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
 /* Content */
 .content{padding:14px;}
 .section{margin-bottom:20px;}
-.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:9px;padding-left:2px;}
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:9px;padding-left:2px;display:flex;justify-content:space-between;align-items:center;}
+.section-sub{font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text3);}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.hint{font-size:11px;color:var(--text3);padding:0 2px 12px;line-height:1.45;}
+.progress{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:12px;}
+.progress > div{height:100%;background:var(--accent);transition:width .2s;}
 
 /* Stock Row */
 .stock-row{display:grid;grid-template-columns:38px 1fr auto auto;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
@@ -64,6 +69,7 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tex
 .bg-red{background:var(--red-light);color:var(--red);}
 .bg-yellow{background:var(--yellow-bg);color:var(--yellow);}
 .bg-gray{background:var(--surface2);color:var(--text2);}
+.bg-blue{background:var(--blue-bg);color:var(--blue);}
 .entry-sig{font-size:10px;color:var(--blue);margin-top:3px;font-weight:500;}
 .stock-signal{font-size:18px;line-height:1;}
 .stock-price{text-align:right;flex-shrink:0;}
@@ -92,6 +98,7 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tex
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;}
 .empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:13px;}
 .empty-icon{font-size:32px;margin-bottom:8px;}
+.empty-sm{padding:22px 16px;text-align:center;color:var(--text3);font-size:12px;}
 
 /* Chart Modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
@@ -151,6 +158,45 @@ const FUTURES=[
   {ticker:'BZ=F',label:'Brent',section:'commodity'},
 ];
 
+// Screener candidate universe (ETFs + blue chips εκτός Big 7)
+const SCREENER=[
+  // Broad / core ETFs
+  {ticker:'SPY',name:'S&P 500 ETF'},
+  {ticker:'QQQ',name:'Nasdaq 100 ETF'},
+  {ticker:'VOO',name:'Vanguard S&P 500'},
+  {ticker:'VTI',name:'Vanguard Total Market'},
+  {ticker:'IWM',name:'Russell 2000 ETF'},
+  {ticker:'DIA',name:'Dow Jones ETF'},
+  {ticker:'VXUS',name:'Intl ex-US ETF'},
+  // Dividend / sector ETFs
+  {ticker:'SCHD',name:'Schwab Dividend ETF'},
+  {ticker:'VYM',name:'Vanguard High Div'},
+  {ticker:'SMH',name:'Semiconductors ETF'},
+  {ticker:'XLE',name:'Energy ETF'},
+  {ticker:'XLV',name:'Healthcare ETF'},
+  {ticker:'XLF',name:'Financials ETF'},
+  {ticker:'GLD',name:'Gold ETF'},
+  {ticker:'TLT',name:'20Y Treasury ETF'},
+  // Blue chips
+  {ticker:'AVGO',name:'Broadcom'},
+  {ticker:'AMD',name:'AMD'},
+  {ticker:'JPM',name:'JPMorgan'},
+  {ticker:'V',name:'Visa'},
+  {ticker:'MA',name:'Mastercard'},
+  {ticker:'COST',name:'Costco'},
+  {ticker:'UNH',name:'UnitedHealth'},
+  {ticker:'LLY',name:'Eli Lilly'},
+  {ticker:'JNJ',name:'Johnson & Johnson'},
+  {ticker:'PG',name:'Procter & Gamble'},
+  {ticker:'KO',name:'Coca-Cola'},
+  {ticker:'HD',name:'Home Depot'},
+  {ticker:'XOM',name:'Exxon Mobil'},
+  {ticker:'NFLX',name:'Netflix'},
+];
+const SCREENER_CACHE_KEY='screener_v1';
+const SCREENER_TTL=10*60*1000; // 10 λεπτά
+const SCREENER_CONCURRENCY=4;
+
 const RANGES=['1mo','3mo','6mo','1y','3y','5y'];
 const RLABELS={'1mo':'1Μ','3mo':'3Μ','6mo':'6Μ','1y':'1Χ','3y':'3Χ','5y':'5Χ'};
 
@@ -194,6 +240,22 @@ async function fetchQuote(ticker,range='1y'){
   }catch(e){return{ok:false,error:e.message};}
 }
 
+// Εκτελεί fetchQuote για πολλά tickers με περιορισμένο concurrency (rate limits)
+async function fetchPool(tickers,concurrency,onProgress){
+  const res={};
+  let idx=0,done=0;
+  const worker=async()=>{
+    while(idx<tickers.length){
+      const t=tickers[idx++];
+      res[t]=await fetchQuote(t);
+      done++;
+      onProgress&&onProgress(done,tickers.length);
+    }
+  };
+  await Promise.all(Array.from({length:Math.min(concurrency,tickers.length)},worker));
+  return res;
+}
+
 function getSignal(d){
   if(!d?.ok) return{icon:'',cls:''};
   const{rsi,ma50above:a50,ma200above:a200}=d;
@@ -210,6 +272,17 @@ function getRsiCls(rsi){
   if(rsi<35) return 'bg-green';
   return 'bg-gray';
 }
+
+// ---- Screener φίλτρα (deterministic, πάνω στα ήδη υπολογισμένα δεδομένα) ----
+// Μακροπρόθεσμα: σταθερό uptrend χωρίς overbought
+function isLongTerm(d){
+  return d?.ok&&d.ma200above===true&&d.ma50above===true&&d.rsi!=null&&d.rsi>=40&&d.rsi<=65;
+}
+// Βραχυπρόθεσμα: το υπάρχον entry signal (oversold streak + bounce σήμερα)
+function isShortEntry(d){ return d?.ok&&!!d.entry; }
+// Βραχυπρόθεσμα / παρακολούθηση: oversold πάνω από MA200, χωρίς bounce ακόμα
+function isShortWatch(d){ return d?.ok&&!d.entry&&d.ma200above===true&&d.rsi!=null&&d.rsi<40; }
+const pctAbove=(price,ma)=>ma?((price/ma-1)*100):null;
 
 // Chart Modal
 function ChartModal({ticker,name,price,chg,onClose}){
@@ -290,7 +363,7 @@ function ChartModal({ticker,name,price,chg,onClose}){
 }
 
 // Stock Row
-function StockRow({ticker,name,target,data,onRemove,onChart}){
+function StockRow({ticker,name,target,data,onRemove,onChart,note}){
   if(!data) return h('div',{className:'stock-row'},
     h('div',{className:'stock-icon'},ticker.slice(0,3)),
     h('div',{className:'stock-main'},
@@ -321,7 +394,8 @@ function StockRow({ticker,name,target,data,onRemove,onChart}){
         data.ma50above!==null&&h('span',{className:`badge ${data.ma50above?'bg-green':'bg-red'}`},'MA50 '+(data.ma50above?'✓':'✗')),
         data.ma200above!==null&&h('span',{className:`badge ${data.ma200above?'bg-green':'bg-red'}`},'MA200 '+(data.ma200above?'✓':'✗'))
       ),
-      data.entry&&h('div',{className:'entry-sig'},data.entry)
+      data.entry&&h('div',{className:'entry-sig'},data.entry),
+      note&&h('div',{className:'entry-sig'},note)
     ),
     h('div',{className:'stock-signal'},sig.icon),
     h('div',{className:'stock-price'},
@@ -348,6 +422,75 @@ function FutCard({item,data}){
   );
 }
 
+// Screener View
+function ScreenerView({data,loading,progress,updatedAt,onChart}){
+  const byTicker=t=>SCREENER.find(s=>s.ticker===t);
+  const entries=Object.entries(data||{});
+
+  const longTerm=entries.filter(([,d])=>isLongTerm(d))
+    .sort((a,b)=>a[1].rsi-b[1].rsi);
+  const shortEntry=entries.filter(([,d])=>isShortEntry(d))
+    .sort((a,b)=>a[1].rsi-b[1].rsi);
+  const shortWatch=entries.filter(([,d])=>isShortWatch(d))
+    .sort((a,b)=>a[1].rsi-b[1].rsi);
+  const errors=entries.filter(([,d])=>!d?.ok).map(([t])=>t);
+
+  if(loading&&entries.length===0) return h('div',null,
+    h('div',{className:'progress'},h('div',{style:{width:(progress.total?progress.done/progress.total*100:0)+'%'}})),
+    h('div',{className:'loading-wrap'},h('div',{className:'spinner'}),`Σάρωση ${progress.done}/${progress.total||SCREENER.length}...`)
+  );
+
+  const row=(t,d,note)=>{
+    const meta=byTicker(t)||{};
+    return h(StockRow,{key:t,ticker:t,name:meta.name,data:d,onChart,note});
+  };
+
+  return h('div',null,
+    loading&&h('div',{className:'progress'},h('div',{style:{width:(progress.total?progress.done/progress.total*100:0)+'%'}})),
+    h('div',{className:'hint'},
+      `Σάρωση ${SCREENER.length} ETFs/μετοχών. Σύσταση βάσει RSI(14), MA50, MA200 — όχι εγγύηση, προσωπική χρήση.`,
+      updatedAt&&h('span',null,` Ενημ. ${updatedAt}.`)
+    ),
+
+    h('div',{className:'section'},
+      h('div',{className:'section-title'},
+        h('span',null,'📈 Μακροπρόθεσμα'),
+        h('span',{className:'section-sub'},'> MA200 & MA50 · RSI 40–65')
+      ),
+      longTerm.length===0
+        ?h('div',{className:'card'},h('div',{className:'empty-sm'},'Καμία μετοχή σε καθαρό uptrend αυτή τη στιγμή'))
+        :h('div',{className:'card'},
+          longTerm.map(([t,d])=>{
+            const p=pctAbove(d.price,d.ma200);
+            return row(t,d,p!=null?`📈 +${p.toFixed(1)}% πάνω από MA200 · πρόταση: σταδιακή είσοδος`:null);
+          })
+        )
+    ),
+
+    h('div',{className:'section'},
+      h('div',{className:'section-title'},
+        h('span',null,'🎯 Βραχυπρόθεσμα'),
+        h('span',{className:'section-sub'},'≥3 μέρες oversold + bounce')
+      ),
+      shortEntry.length===0
+        ?h('div',{className:'card'},h('div',{className:'empty-sm'},'Κανένα entry signal σήμερα'))
+        :h('div',{className:'card'},shortEntry.map(([t,d])=>row(t,d,null)))
+    ),
+
+    shortWatch.length>0&&h('div',{className:'section'},
+      h('div',{className:'section-title'},
+        h('span',null,'👀 Oversold — χωρίς bounce ακόμα'),
+        h('span',{className:'section-sub'},'RSI < 40 · > MA200')
+      ),
+      h('div',{className:'card'},
+        shortWatch.map(([t,d])=>row(t,d,'⏳ Περίμενε πράσινη μέρα για επιβεβαίωση'))
+      )
+    ),
+
+    errors.length>0&&h('div',{className:'hint'},'Σφάλμα φόρτωσης: '+errors.join(', '))
+  );
+}
+
 // App
 function App(){
   const [tab,setTab]=useState('markets');
@@ -359,6 +502,13 @@ function App(){
   const [adding,setAdding]=useState(false);
   const [toast,setToast]=useState(null);
   const [chart,setChart]=useState(null);
+
+  // Screener state (lazy + cached)
+  const [scrData,setScrData]=useState({});
+  const [scrLoading,setScrLoading]=useState(false);
+  const [scrProgress,setScrProgress]=useState({done:0,total:0});
+  const [scrTime,setScrTime]=useState(null); // ms timestamp
+  const scrLoadedRef=useRef(false);
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500);};
 
@@ -372,8 +522,44 @@ function App(){
     setLoading(false);
   },[watchlist]);
 
+  const loadScreener=useCallback(async(force=false)=>{
+    if(scrLoading) return;
+    // 1) cache
+    if(!force){
+      try{
+        const c=JSON.parse(localStorage.getItem(SCREENER_CACHE_KEY)||'null');
+        if(c&&c.ts&&Date.now()-c.ts<SCREENER_TTL&&c.data){
+          // κρατάμε μόνο ό,τι χρειάζεται ο screener (όχι closes/volumes)
+          setScrData(c.data);setScrTime(c.ts);scrLoadedRef.current=true;return;
+        }
+      }catch{}
+    }
+    // 2) fetch με pool
+    setScrLoading(true);
+    const tickers=SCREENER.map(s=>s.ticker);
+    setScrProgress({done:0,total:tickers.length});
+    const res=await fetchPool(tickers,SCREENER_CONCURRENCY,(done,total)=>setScrProgress({done,total}));
+    // slim copy για cache (χωρίς arrays ιστορικού)
+    const slim={};
+    for(const [t,d] of Object.entries(res)){
+      if(!d.ok){slim[t]={ok:false,error:d.error};continue;}
+      const {closes,timestamps,volumes,...rest}=d;
+      slim[t]=rest;
+    }
+    const ts=Date.now();
+    setScrData(slim);setScrTime(ts);scrLoadedRef.current=true;
+    try{localStorage.setItem(SCREENER_CACHE_KEY,JSON.stringify({ts,data:slim}));}catch{}
+    setScrLoading(false);
+  },[scrLoading]);
+
   useEffect(()=>{loadAll();},[]);
   useEffect(()=>{localStorage.setItem('wl4',JSON.stringify(watchlist));},[watchlist]);
+  useEffect(()=>{if(tab==='screener'&&!scrLoadedRef.current) loadScreener(false);},[tab]);
+
+  const handleRefresh=()=>{
+    if(tab==='screener') loadScreener(true); else loadAll();
+  };
+  const isBusy=tab==='screener'?scrLoading:loading;
 
   const handleAdd=async()=>{
     const t=addVal.trim().toUpperCase();
@@ -391,24 +577,31 @@ function App(){
   const idxFut=FUTURES.filter(f=>f.section==='index');
   const comFut=FUTURES.filter(f=>f.section==='commodity');
 
+  const scrTimeLabel=scrTime?new Date(scrTime).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}):null;
+  const hdrSub=tab==='screener'
+    ?(scrTimeLabel&&'Screener '+scrTimeLabel+' · cache 10λ')
+    :(lastUp&&'Ενημ. '+lastUp+' · 15λ delay');
+
+  const NAV=[['markets','📊','Αγορές'],['futures','📈','Futures'],['watchlist','⭐','Watchlist'],['screener','🔍','Screener']];
+
   return h('div',{className:'app'},
     h('div',{className:'hdr'},
       h('div',{className:'hdr-left'},
         h('div',{className:'hdr-logo'},'📈'),
         h('div',null,
           h('div',{className:'hdr-title'},'Βοηθός Stocks'),
-          lastUp&&h('div',{className:'hdr-sub'},'Ενημ. '+lastUp+' · 15λ delay')
+          hdrSub&&h('div',{className:'hdr-sub'},hdrSub)
         )
       ),
-      h('button',{className:'refresh-btn',onClick:loadAll,disabled:loading},
-        h('span',{className:loading?'spinning':''},'↻')
+      h('button',{className:'refresh-btn',onClick:handleRefresh,disabled:isBusy},
+        h('span',{className:isBusy?'spinning':''},'↻')
       )
     ),
 
     h('div',{className:'tabs'},
-      h('button',{className:`tab ${tab==='markets'?'active':''}`,onClick:()=>setTab('markets')},'📊 Αγορές'),
-      h('button',{className:`tab ${tab==='futures'?'active':''}`,onClick:()=>setTab('futures')},'📈 Futures'),
-      h('button',{className:`tab ${tab==='watchlist'?'active':''}`,onClick:()=>setTab('watchlist')},'⭐ Watchlist')
+      NAV.map(([t,icon,label])=>
+        h('button',{key:t,className:`tab ${tab===t?'active':''}`,onClick:()=>setTab(t)},icon+' '+label)
+      )
     ),
 
     h('div',{className:'content'},
@@ -446,14 +639,16 @@ function App(){
               onChart:openChart,
               onRemove:t=>{setWatchlist(p=>p.filter(w=>w.ticker!==t));showToast('Αφαιρέθηκε');}}))
           )
-      )
+      ),
+
+      tab==='screener'&&h(ScreenerView,{data:scrData,loading:scrLoading,progress:scrProgress,updatedAt:scrTimeLabel,onChart:openChart})
     ),
 
     chart&&h(ChartModal,{...chart,onClose:()=>setChart(null)}),
     toast&&h('div',{className:'toast'},toast),
 
     h('div',{className:'bottom-nav'},
-      [['markets','📊','Αγορές'],['futures','📈','Futures'],['watchlist','⭐','Watchlist']].map(([t,icon,label])=>
+      NAV.map(([t,icon,label])=>
         h('button',{key:t,className:`nav-btn ${tab===t?'active':''}`,onClick:()=>setTab(t)},
           h('span',{className:'nav-icon'},icon),label
         )
