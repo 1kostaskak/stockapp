@@ -7,7 +7,9 @@ export default async function handler(req, res) {
   const { ticker, range = '1y' } = req.query;
   if (!ticker) return res.status(400).json({ error: 'No ticker' });
 
-  const FINNHUB_KEY = 'd7sak1pr01qorsvi18p0d7sak1pr01qorsvi18pg';
+  const FINNHUB_KEY = process.env.FINNHUB_KEY;
+  if (!FINNHUB_KEY) return res.status(500).json({ error: 'Missing FINNHUB_KEY env var' });
+
   const isFutures = ticker.includes('=F') || ticker.includes('=X');
 
   // Map range to Yahoo Finance params
