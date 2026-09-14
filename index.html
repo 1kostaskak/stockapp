@@ -496,12 +496,11 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
   const byTicker=t=>SCREENER.find(s=>s.ticker===t);
   const entries=Object.entries(data||{});
 
-  const longTerm=entries.filter(([,d])=>isLongTerm(d))
-    .sort((a,b)=>a[1].rsi-b[1].rsi);
-  const shortEntry=entries.filter(([,d])=>isShortEntry(d))
-    .sort((a,b)=>a[1].rsi-b[1].rsi);
-  const shortWatch=entries.filter(([,d])=>isShortWatch(d))
-    .sort((a,b)=>a[1].rsi-b[1].rsi);
+  const byER=(a,b)=>b[1].expectedReturn-a[1].expectedReturn; // ER φθίνουσα (βραχυπρόθεσμα)
+  const byRSI=(a,b)=>a[1].rsi-b[1].rsi;                        // RSI αύξουσα (μακροπρόθεσμα)
+  const longTerm=entries.filter(([,d])=>isLongTerm(d)).sort(byRSI);
+  const shortEntry=entries.filter(([,d])=>isShortEntry(d)).sort(byER);
+  const shortWatch=entries.filter(([,d])=>isShortWatch(d)).sort(byER);
   const errors=entries.filter(([,d])=>!d?.ok).map(([t])=>t);
 
   if(loading&&entries.length===0) return h('div',null,
