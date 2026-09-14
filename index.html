@@ -161,22 +161,22 @@ const FUTURES=[
 // Screener candidate universe (ETFs + blue chips εκτός Big 7)
 const SCREENER=[
   // Broad / core ETFs
-  {ticker:'SPY',name:'S&P 500 ETF'},
-  {ticker:'QQQ',name:'Nasdaq 100 ETF'},
-  {ticker:'VOO',name:'Vanguard S&P 500'},
-  {ticker:'VTI',name:'Vanguard Total Market'},
-  {ticker:'IWM',name:'Russell 2000 ETF'},
-  {ticker:'DIA',name:'Dow Jones ETF'},
-  {ticker:'VXUS',name:'Intl ex-US ETF'},
+  {ticker:'SPY',name:'S&P 500 ETF',etf:true},
+  {ticker:'QQQ',name:'Nasdaq 100 ETF',etf:true},
+  {ticker:'VOO',name:'Vanguard S&P 500',etf:true},
+  {ticker:'VTI',name:'Vanguard Total Market',etf:true},
+  {ticker:'IWM',name:'Russell 2000 ETF',etf:true},
+  {ticker:'DIA',name:'Dow Jones ETF',etf:true},
+  {ticker:'VXUS',name:'Intl ex-US ETF',etf:true},
   // Dividend / sector ETFs
-  {ticker:'SCHD',name:'Schwab Dividend ETF'},
-  {ticker:'VYM',name:'Vanguard High Div'},
-  {ticker:'SMH',name:'Semiconductors ETF'},
-  {ticker:'XLE',name:'Energy ETF'},
-  {ticker:'XLV',name:'Healthcare ETF'},
-  {ticker:'XLF',name:'Financials ETF'},
-  {ticker:'GLD',name:'Gold ETF'},
-  {ticker:'TLT',name:'20Y Treasury ETF'},
+  {ticker:'SCHD',name:'Schwab Dividend ETF',etf:true},
+  {ticker:'VYM',name:'Vanguard High Div',etf:true},
+  {ticker:'SMH',name:'Semiconductors ETF',etf:true},
+  {ticker:'XLE',name:'Energy ETF',etf:true},
+  {ticker:'XLV',name:'Healthcare ETF',etf:true},
+  {ticker:'XLF',name:'Financials ETF',etf:true},
+  {ticker:'GLD',name:'Gold ETF',etf:true},
+  {ticker:'TLT',name:'20Y Treasury ETF',etf:true},
   // Blue chips
   {ticker:'AVGO',name:'Broadcom'},
   {ticker:'AMD',name:'AMD'},
@@ -203,9 +203,11 @@ const SCREENER=[
   {ticker:'36B1.DE',name:'iShares JPM EM $ Bonds',cur:'€'},
   {ticker:'2B7S.DE',name:'iShares US Treasury 1-3Y EUR-H',cur:'€'},
 ];
-const SCREENER_CACHE_KEY='screener_v2';
+const SCREENER_CACHE_KEY='screener_v3';
 const SCREENER_TTL=10*60*1000; // 10 λεπτά
 const SCREENER_CONCURRENCY=4;
+const ER_MIN=7;            // ελάχιστο expected return (%) για είσοδο σε section
+const AMT_MIN=600, AMT_MAX=3000, ER_FULL=20; // κλίμακα ποσού: ER 7% → 600€, ER 20%+ → 3000€
 
 const RANGES=['1mo','3mo','6mo','1y','3y','5y'];
 const RLABELS={'1mo':'1Μ','3mo':'3Μ','6mo':'6Μ','1y':'1Χ','3y':'3Χ','5y':'5Χ'};
@@ -233,6 +235,9 @@ async function fetchQuote(ticker,range='1y'){
     }
     const ma50=closes.length>=50?closes.slice(-50).reduce((a,b)=>a+b,0)/50:null;
     const ma200=closes.length>=200?closes.slice(-200).reduce((a,b)=>a+b,0)/200:null;
+    // 52w high από το ίδιο 1y closes array — proxy "προβλεπόμενης απόδοσης" (mean-reversion heuristic)
+    const high52=closes.length?Math.max(...closes):null;
+    const expectedReturn=high52&&price>0?((high52/price)-1)*100:null;
     let odays=0;
     for(let i=closes.length-1;i>=Math.max(14,closes.length-10);i--){
       const sl2=closes.slice(i-14,i+1);
@@ -243,7 +248,7 @@ async function fetchQuote(ticker,range='1y'){
       if(r2<45) odays++; else break;
     }
     const entry=odays>=3&&chg>0&&rsi&&rsi<45?`🎯 ~$${(price*.995).toFixed(2)} (${odays} μέρες oversold)`:null;
-    return{price,chg,rsi,ma50,ma200,
+    return{price,chg,rsi,ma50,ma200,high52,expectedReturn,
       ma50above:ma50?price>ma50:null,
       ma200above:ma200?price>ma200:null,
       entry,closes,timestamps,volumes,ok:true};
@@ -266,6 +271,22 @@ async function fetchPool(tickers,concurrency,onProgress){
   return res;
 }
 
+// Analyst cross-check (μόνο μετοχές, μόνο όσες πέρασαν το φίλτρο)
+async function fetchAnalyst(ticker){
+  try{
+    const r=await fetch(`/api/target?ticker=${encodeURIComponent(ticker)}`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    return{target:j.target||null,rec:j.rec||null,ok:true};
+  }catch(e){return{target:null,rec:null,ok:false};}
+}
+async function analystPool(tickers,concurrency,onProgress){
+  const res={};let idx=0,done=0;
+  const worker=async()=>{while(idx<tickers.length){const t=tickers[idx++];res[t]=await fetchAnalyst(t);done++;onProgress&&onProgress(done,tickers.length);}};
+  await Promise.all(Array.from({length:Math.min(concurrency,tickers.length)},worker));
+  return res;
+}
+
 function getSignal(d){
   if(!d?.ok) return{icon:'',cls:''};
   const{rsi,ma50above:a50,ma200above:a200}=d;
@@ -284,15 +305,51 @@ function getRsiCls(rsi){
 }
 
 // ---- Screener φίλτρα (deterministic, πάνω στα ήδη υπολογισμένα δεδομένα) ----
-// Μακροπρόθεσμα: σταθερό uptrend χωρίς overbought
+// Κύριο φίλτρο: expected return (upside μέχρι 52w high) >= ER_MIN
+function passesER(d){ return d?.ok&&d.expectedReturn!=null&&d.expectedReturn>=ER_MIN; }
+// Μακροπρόθεσμα: σταθερό uptrend χωρίς overbought (+ ER φίλτρο)
 function isLongTerm(d){
-  return d?.ok&&d.ma200above===true&&d.ma50above===true&&d.rsi!=null&&d.rsi>=40&&d.rsi<=65;
+  return passesER(d)&&d.ma200above===true&&d.ma50above===true&&d.rsi!=null&&d.rsi>=40&&d.rsi<=65;
 }
-// Βραχυπρόθεσμα: το υπάρχον entry signal (oversold streak + bounce σήμερα)
-function isShortEntry(d){ return d?.ok&&!!d.entry; }
-// Βραχυπρόθεσμα / παρακολούθηση: oversold πάνω από MA200, χωρίς bounce ακόμα
-function isShortWatch(d){ return d?.ok&&!d.entry&&d.ma200above===true&&d.rsi!=null&&d.rsi<40; }
+// Βραχυπρόθεσμα: το υπάρχον entry signal (oversold streak + bounce σήμερα) (+ ER φίλτρο)
+function isShortEntry(d){ return passesER(d)&&!!d.entry; }
+// Βραχυπρόθεσμα / παρακολούθηση: oversold πάνω από MA200, χωρίς bounce ακόμα (+ ER φίλτρο)
+function isShortWatch(d){ return passesER(d)&&!d.entry&&d.ma200above===true&&d.rsi!=null&&d.rsi<40; }
 const pctAbove=(price,ma)=>ma?((price/ma-1)*100):null;
+const erBadge=er=>er>10?'ER >10%':'ER 7–10%';
+
+// Analyst verdict: {label, agree:true|false|null}
+function analystVerdict(d){
+  const a=d.analyst;
+  if(a===undefined) return{label:'… αναλυτές',agree:null};
+  if(a?.target?.mean&&d.price>0){
+    const up=(a.target.mean/d.price-1)*100;
+    const s=(up>=0?'+':'')+up.toFixed(0)+'%';
+    return up>=5?{label:`✓ Αναλυτές συμφωνούν (target ${s})`,agree:true}
+                :{label:`⚠ Αναλυτές διαφωνούν (target ${s})`,agree:false};
+  }
+  if(a?.rec){
+    const {buy,hold,sell}=a.rec;
+    const agree=buy>sell;
+    return{label:`${agree?'✓':'⚠'} Αναλυτές: ${buy} buy / ${hold} hold / ${sell} sell`,agree};
+  }
+  return{label:'— Χωρίς στοιχεία αναλυτών',agree:null};
+}
+
+// Προτεινόμενο ποσό — διαφανής γραμμική κλίμακα πάνω στο ER, × 0.75 αν οι αναλυτές διαφωνούν
+function suggestAmount(d){
+  const er=d.expectedReturn;
+  const k=Math.min(Math.max((er-ER_MIN)/(ER_FULL-ER_MIN),0),1);
+  const base=Math.round(AMT_MIN+(AMT_MAX-AMT_MIN)*k);
+  const v=analystVerdict(d);
+  // ×1.00 συμφωνούν · ×0.85 χωρίς στοιχεία (ETFs/.DE, ουδέτερο) · ×0.75 διαφωνούν
+  const factor=v.agree===false?0.75:v.agree===null?0.85:1;
+  const why=v.agree===false?'αναλυτές διαφωνούν':v.agree===null?'χωρίς αναλυτές':'';
+  const amt=Math.min(AMT_MAX,Math.round(base*factor/50)*50);
+  const fmt=n=>n.toLocaleString('el-GR');
+  const explain=`ER ${er.toFixed(1)}% → ${fmt(base)}€`+(factor<1?` × ${factor} (${why})`:'');
+  return{amt,explain:`💶 Πρόταση ${fmt(amt)}€ · ${explain}`};
+}
 
 // Chart Modal
 function ChartModal({ticker,name,price,chg,cur='$',onClose}){
@@ -374,6 +431,7 @@ function ChartModal({ticker,name,price,chg,cur='$',onClose}){
 
 // Stock Row
 function StockRow({ticker,name,target,data,onRemove,onChart,note,cur='$'}){
+  const notes=note?(Array.isArray(note)?note:[note]).filter(Boolean):[];
   if(!data) return h('div',{className:'stock-row'},
     h('div',{className:'stock-icon'},ticker.slice(0,3)),
     h('div',{className:'stock-main'},
@@ -402,10 +460,11 @@ function StockRow({ticker,name,target,data,onRemove,onChart,note,cur='$'}){
         data.rsi&&h('span',{className:`badge ${getRsiCls(data.rsi)}`},'RSI '+data.rsi),
         sig.label&&h('span',{className:`badge ${sig.cls}`},sig.label),
         data.ma50above!==null&&h('span',{className:`badge ${data.ma50above?'bg-green':'bg-red'}`},'MA50 '+(data.ma50above?'✓':'✗')),
-        data.ma200above!==null&&h('span',{className:`badge ${data.ma200above?'bg-green':'bg-red'}`},'MA200 '+(data.ma200above?'✓':'✗'))
+        data.ma200above!==null&&h('span',{className:`badge ${data.ma200above?'bg-green':'bg-red'}`},'MA200 '+(data.ma200above?'✓':'✗')),
+        data.expectedReturn!=null&&data.expectedReturn>=ER_MIN&&h('span',{className:'badge bg-blue'},erBadge(data.expectedReturn))
       ),
       data.entry&&h('div',{className:'entry-sig'},data.entry),
-      note&&h('div',{className:'entry-sig'},note)
+      notes.map((n,i)=>h('div',{key:i,className:'entry-sig',style:i>0?{color:'var(--text2)'}:null},n))
     ),
     h('div',{className:'stock-signal'},sig.icon),
     h('div',{className:'stock-price'},
@@ -447,32 +506,37 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
 
   if(loading&&entries.length===0) return h('div',null,
     h('div',{className:'progress'},h('div',{style:{width:(progress.total?progress.done/progress.total*100:0)+'%'}})),
-    h('div',{className:'loading-wrap'},h('div',{className:'spinner'}),`Σάρωση ${progress.done}/${progress.total||SCREENER.length}...`)
+    h('div',{className:'loading-wrap'},h('div',{className:'spinner'}),`${progress.phase==='analysts'?'Αναλυτές':'Σάρωση'} ${progress.done}/${progress.total||SCREENER.length}...`)
   );
 
   const row=(t,d,note)=>{
     const meta=byTicker(t)||{};
-    return h(StockRow,{key:t,ticker:t,name:meta.name,data:d,onChart,note,cur:meta.cur||'$'});
+    const v=analystVerdict(d);
+    const a=suggestAmount(d);
+    return h(StockRow,{key:t,ticker:t,name:meta.name,data:d,onChart,cur:meta.cur||'$',
+      note:[note,a.explain,v.label]});
   };
 
   return h('div',null,
     loading&&h('div',{className:'progress'},h('div',{style:{width:(progress.total?progress.done/progress.total*100:0)+'%'}})),
     h('div',{className:'hint'},
-      `Σάρωση ${SCREENER.length} ETFs/μετοχών (US σε $, Xetra σε €). Σύσταση βάσει RSI(14), MA50, MA200 — όχι εγγύηση, προσωπική χρήση.`,
+      `Σάρωση ${SCREENER.length} ETFs/μετοχών (US σε $, Xetra σε €). Είσοδος μόνο με ER ≥ ${ER_MIN}%. `,
+      h('b',null,'ER = απόσταση από το 52w high'),
+      ` — mean-reversion heuristic, ΟΧΙ πρόβλεψη. Ποσό: ${AMT_MIN}€ στο ${ER_MIN}% → ${AMT_MAX.toLocaleString('el-GR')}€ στο ${ER_FULL}%+, ×0.85 χωρίς στοιχεία αναλυτών (ETFs), ×0.75 αν διαφωνούν. Προσωπική χρήση.`,
       updatedAt&&h('span',null,` Ενημ. ${updatedAt}.`)
     ),
 
     h('div',{className:'section'},
       h('div',{className:'section-title'},
         h('span',null,'📈 Μακροπρόθεσμα'),
-        h('span',{className:'section-sub'},'> MA200 & MA50 · RSI 40–65')
+        h('span',{className:'section-sub'},'> MA200 & MA50 · RSI 40–65 · ER ≥ 7%')
       ),
       longTerm.length===0
         ?h('div',{className:'card'},h('div',{className:'empty-sm'},'Καμία μετοχή σε καθαρό uptrend αυτή τη στιγμή'))
         :h('div',{className:'card'},
           longTerm.map(([t,d])=>{
             const p=pctAbove(d.price,d.ma200);
-            return row(t,d,p!=null?`📈 +${p.toFixed(1)}% πάνω από MA200 · πρόταση: σταδιακή είσοδος`:null);
+            return row(t,d,p!=null?`📈 +${p.toFixed(1)}% πάνω από MA200 · σταδιακή είσοδος`:null);
           })
         )
     ),
@@ -480,7 +544,7 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
     h('div',{className:'section'},
       h('div',{className:'section-title'},
         h('span',null,'🎯 Βραχυπρόθεσμα'),
-        h('span',{className:'section-sub'},'≥3 μέρες oversold + bounce')
+        h('span',{className:'section-sub'},'≥3 μέρες oversold + bounce · ER ≥ 7%')
       ),
       shortEntry.length===0
         ?h('div',{className:'card'},h('div',{className:'empty-sm'},'Κανένα entry signal σήμερα'))
@@ -490,7 +554,7 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
     shortWatch.length>0&&h('div',{className:'section'},
       h('div',{className:'section-title'},
         h('span',null,'👀 Oversold — χωρίς bounce ακόμα'),
-        h('span',{className:'section-sub'},'RSI < 40 · > MA200')
+        h('span',{className:'section-sub'},'RSI < 40 · > MA200 · ER ≥ 7%')
       ),
       h('div',{className:'card'},
         shortWatch.map(([t,d])=>row(t,d,'⏳ Περίμενε πράσινη μέρα για επιβεβαίωση'))
@@ -516,7 +580,7 @@ function App(){
   // Screener state (lazy + cached)
   const [scrData,setScrData]=useState({});
   const [scrLoading,setScrLoading]=useState(false);
-  const [scrProgress,setScrProgress]=useState({done:0,total:0});
+  const [scrProgress,setScrProgress]=useState({done:0,total:0,phase:'quotes'});
   const [scrTime,setScrTime]=useState(null); // ms timestamp
   const scrLoadedRef=useRef(false);
 
@@ -547,8 +611,8 @@ function App(){
     // 2) fetch με pool
     setScrLoading(true);
     const tickers=SCREENER.map(s=>s.ticker);
-    setScrProgress({done:0,total:tickers.length});
-    const res=await fetchPool(tickers,SCREENER_CONCURRENCY,(done,total)=>setScrProgress({done,total}));
+    setScrProgress({done:0,total:tickers.length,phase:'quotes'});
+    const res=await fetchPool(tickers,SCREENER_CONCURRENCY,(done,total)=>setScrProgress({done,total,phase:'quotes'}));
     // slim copy για cache (χωρίς arrays ιστορικού)
     const slim={};
     for(const [t,d] of Object.entries(res)){
@@ -556,6 +620,19 @@ function App(){
       const {closes,timestamps,volumes,...rest}=d;
       slim[t]=rest;
     }
+    // Phase 2: analyst cross-check ΜΟΝΟ για μετοχές που πέρασαν κάποιο φίλτρο (όχι ETFs, όχι .DE)
+    const need=SCREENER.filter(s=>!s.etf&&!s.ticker.includes('.'))
+      .map(s=>s.ticker)
+      .filter(t=>{const d=slim[t];return isLongTerm(d)||isShortEntry(d)||isShortWatch(d);});
+    // δείξε πρώτα τα αποτελέσματα, μετά γέμισε αναλυτές
+    setScrData({...slim});
+    if(need.length){
+      setScrProgress({done:0,total:need.length,phase:'analysts'});
+      const an=await analystPool(need,3,(done,total)=>setScrProgress({done,total,phase:'analysts'}));
+      for(const t of need) slim[t]={...slim[t],analyst:an[t]};
+    }
+    // όσα δεν χρειάζονται analyst call → ρητά null (= "χωρίς στοιχεία"), όχι undefined (= φορτώνει)
+    for(const t of Object.keys(slim)) if(slim[t].ok&&slim[t].analyst===undefined) slim[t].analyst=null;
     const ts=Date.now();
     setScrData(slim);setScrTime(ts);scrLoadedRef.current=true;
     try{localStorage.setItem(SCREENER_CACHE_KEY,JSON.stringify({ts,data:slim}));}catch{}
