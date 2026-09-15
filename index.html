@@ -193,11 +193,11 @@ const SCREENER=[
   {ticker:'XOM',name:'Exxon Mobil'},
   {ticker:'NFLX',name:'Netflix'},
   // iShares (Xetra, EUR) — σερβίρονται από Yahoo μέσω του proxy
-  {ticker:'CEBS.DE',name:'iShares Copper Miners',cur:'€'},
-  {ticker:'2B78.DE',name:'iShares Healthcare Innovation',cur:'€'},
+  {ticker:'CEBS.DE',name:'iShares Copper Miners',cur:'€',volatile:true},
+  {ticker:'2B78.DE',name:'iShares Healthcare Innovation',cur:'€',volatile:true},
   {ticker:'IUHE.DE',name:'iShares S&P500 Health Care (EUR H)',cur:'€'},
   {ticker:'CBUF.DE',name:'iShares MSCI World Health ESG',cur:'€'},
-  {ticker:'2B76.DE',name:'iShares Automation & Robotics',cur:'€'},
+  {ticker:'2B76.DE',name:'iShares Automation & Robotics',cur:'€',volatile:true},
   {ticker:'EXXW.DE',name:'iShares Asia Pacific Div 50',cur:'€'},
   {ticker:'EXI2.DE',name:'iShares Global Titans 50',cur:'€'},
   {ticker:'36B1.DE',name:'iShares JPM EM $ Bonds',cur:'€'},
@@ -551,6 +551,8 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
   const longTerm=entries.filter(([,d])=>isLongTerm(d)).sort(byRSI);
   const shortEntry=entries.filter(([,d])=>isShortEntry(d)).sort(byER);
   const shortWatch=entries.filter(([,d])=>isShortWatch(d)).sort(byER);
+  // Volatile ETFs: ίδιο ER φίλτρο, μόνο tickers με volatile:true (ξεχωριστή προβολή, δεν αφαιρούνται από πάνω)
+  const volatile=entries.filter(([t,d])=>byTicker(t)?.volatile===true&&passesER(d)).sort(byER);
   const errors=entries.filter(([,d])=>!d?.ok).map(([t])=>t);
 
   if(loading&&entries.length===0) return h('div',null,
@@ -606,6 +608,16 @@ function ScreenerView({data,loading,progress,updatedAt,onChart}){
       h('div',{className:'card'},
         shortWatch.map(([t,d])=>row(t,d,'⏳ Περίμενε πράσινη μέρα για επιβεβαίωση'))
       )
+    ),
+
+    h('div',{className:'section'},
+      h('div',{className:'section-title'},
+        h('span',null,'💎 Volatile ETFs'),
+        h('span',{className:'section-sub'},'ER ≥ 7% · χωρίς MA/RSI φίλτρο')
+      ),
+      volatile.length===0
+        ?h('div',{className:'card'},h('div',{className:'empty-sm'},'Κανένα volatile ETF με ER ≥ 7% αυτή τη στιγμή'))
+        :h('div',{className:'card'},volatile.map(([t,d])=>row(t,d,null)))
     ),
 
     errors.length>0&&h('div',{className:'hint'},'Σφάλμα φόρτωσης: '+errors.join(', '))
@@ -803,4 +815,3 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
 </body>
 </html>
-    
