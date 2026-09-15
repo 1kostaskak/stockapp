@@ -271,14 +271,40 @@ async function fetchPool(tickers,concurrency,onProgress){
   return res;
 }
 
+const EXCH_SUFFIX=/\.[A-Z0-9]{1,4}$/;   // .DE, .L, .PA ... → Yahoo-only, χωρίς Finnhub analyst data
+const ANALYST_TTL=60*60*1000;             // 1 ώρα in-memory memo
+const analystMemo={};
+
 // Analyst cross-check (μόνο μετοχές, μόνο όσες πέρασαν το φίλτρο)
 async function fetchAnalyst(ticker){
+  const m=analystMemo[ticker];
+  if(m&&Date.now()-m.ts<ANALYST_TTL) return m.v;
   try{
     const r=await fetch(`/api/target?ticker=${encodeURIComponent(ticker)}`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json();
-    return{target:j.target||null,rec:j.rec||null,ok:true};
+    const v={target:j.target||null,rec:j.rec||null,ok:true};
+    analystMemo[ticker]={ts:Date.now(),v};
+    return v;
   }catch(e){return{target:null,rec:null,ok:false};}
+}
+// Ποιά tickers από ένα data map χρειάζονται analyst call (ER pass, όχι futures, όχι exchange suffix)
+function analystCandidates(dataMap){
+  return Object.entries(dataMap)
+    .filter(([t,d])=>passesER(d)&&d.analyst===undefined&&!t.includes('=')&&!EXCH_SUFFIX.test(t))
+    .map(([t])=>t);
+}
+// Γεμίζει analyst σε ένα data map (mutates αντίγραφο, επιστρέφει νέο map)
+async function enrichAnalysts(dataMap,onProgress){
+  const out={...dataMap};
+  const need=analystCandidates(out);
+  if(need.length){
+    const an=await analystPool(need,3,onProgress);
+    for(const t of need) out[t]={...out[t],analyst:an[t]};
+  }
+  // ER-pass tickers χωρίς δυνατότητα analyst call (.DE κλπ) → ρητά null
+  for(const [t,d] of Object.entries(out)) if(passesER(d)&&d.analyst===undefined) out[t]={...d,analyst:null};
+  return out;
 }
 async function analystPool(tickers,concurrency,onProgress){
   const res={};let idx=0,done=0;
@@ -349,6 +375,11 @@ function suggestAmount(d){
   const fmt=n=>n.toLocaleString('el-GR');
   const explain=`ER ${er.toFixed(1)}% → ${fmt(base)}€`+(factor<1?` × ${factor} (${why})`:'');
   return{amt,explain:`💶 Πρόταση ${fmt(amt)}€ · ${explain}`};
+}
+// Notes για Big7/Watchlist rows: μόνο όταν περνάει το ER φίλτρο
+function erNotes(d){
+  if(!passesER(d)) return [];
+  return [suggestAmount(d).explain,analystVerdict(d).label];
 }
 
 // Chart Modal
@@ -593,6 +624,9 @@ function App(){
     setData(res);
     setLastUp(new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}));
     setLoading(false);
+    // lazy analyst cross-check μόνο για όσα δείχνουν ER badge
+    const enriched=await enrichAnalysts(res);
+    setData(p=>{const n={...p};for(const t of Object.keys(enriched)) if(n[t]) n[t]={...n[t],analyst:enriched[t].analyst};return n;});
   },[watchlist]);
 
   const loadScreener=useCallback(async(force=false)=>{
@@ -653,9 +687,12 @@ function App(){
     if(watchlist.find(w=>w.ticker===t)||BIG7.find(b=>b.ticker===t)){showToast('Υπάρχει ήδη');return;}
     setAdding(true);
     const d=await fetchQuote(t);
-    if(!d.ok){showToast('Δεν βρέθηκε: '+t);}
-    else{setWatchlist(p=>[...p,{ticker:t,name:t}]);setData(p=>({...p,[t]:d}));setAddVal('');showToast('✓ '+t);}
+    if(!d.ok){showToast('Δεν βρέθηκε: '+t);setAdding(false);return;}
+    const cur=EXCH_SUFFIX.test(t)?'€':'$';
+    setWatchlist(p=>[...p,{ticker:t,name:t,cur}]);setData(p=>({...p,[t]:d}));setAddVal('');showToast('✓ '+t);
     setAdding(false);
+    const enriched=await enrichAnalysts({[t]:d});
+    if(enriched[t].analyst!==undefined) setData(p=>p[t]?{...p,[t]:{...p[t],analyst:enriched[t].analyst}}:p);
   };
 
   const openChart=(ticker,name,price,chg,cur='$')=>setChart({ticker,name,price,chg,cur});
@@ -696,7 +733,7 @@ function App(){
         loading&&!data['AAPL']
           ?h('div',{className:'loading-wrap'},h('div',{className:'spinner'}),'Φόρτωση...')
           :h('div',{className:'card'},
-            BIG7.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,target:s.target,data:data[s.ticker],onChart:openChart}))
+            BIG7.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,target:s.target,data:data[s.ticker],onChart:openChart,note:erNotes(data[s.ticker])}))
           )
       ),
 
@@ -715,13 +752,14 @@ function App(){
         h('div',{className:'add-box'},
           h('input',{className:'add-input',placeholder:'Ticker (π.χ. PLTR)',value:addVal,
             onChange:e=>setAddVal(e.target.value.toUpperCase()),
-            onKeyDown:e=>e.key==='Enter'&&handleAdd(),maxLength:6}),
+            onKeyDown:e=>e.key==='Enter'&&handleAdd(),maxLength:10}),
           h('button',{className:'add-btn',onClick:handleAdd,disabled:adding||!addVal.trim()},adding?'...':'+ Προσθήκη')
         ),
         watchlist.length===0
           ?h('div',{className:'empty'},h('div',{className:'empty-icon'},'📋'),'Πρόσθεσε μετοχές')
           :h('div',{className:'card'},
             watchlist.map(s=>h(StockRow,{key:s.ticker,ticker:s.ticker,name:s.name,data:data[s.ticker],
+              cur:s.cur||(EXCH_SUFFIX.test(s.ticker)?'€':'$'),note:erNotes(data[s.ticker]),
               onChart:openChart,
               onRemove:t=>{setWatchlist(p=>p.filter(w=>w.ticker!==t));showToast('Αφαιρέθηκε');}}))
           )
